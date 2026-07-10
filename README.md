@@ -2,6 +2,10 @@
 
 테크포임팩트 캠퍼스 26-2 사회혁신조직 모집 현황을 보여주는 내부용 대시보드.
 
+- **대시보드 주소**: https://joan7403-dev.github.io/campus-apply-dashboard/ (비밀번호 게이트)
+- 내부 공유용: 화면 앞 비밀번호(캐주얼 차단) + `noindex` 메타 + `robots.txt`로 검색 색인 차단
+- 소스에는 신청 데이터가 들어있지 않음 (모든 데이터는 열람 시점에 Apps Script에서 로드)
+
 - **데이터 원본**: [신청 응답 구글시트](https://docs.google.com/spreadsheets/d/13T-rtHCFIKb5VHrFL5AMgqNB5KmIHSyEc0KB-C8nrac/edit?gid=229370971)
 - **목표**: 24팀 (조직 기준, 같은 조직 중복 신청은 1팀으로 카운트)
 - **디자인**: [campus_2026_spring 파트너 페이지](https://kakao-impact-foundation.github.io/campus_2026_spring/partner/) 톤 (카카오빅산스 + 검정 테두리 + 노랑 #FAE100)
@@ -31,7 +35,7 @@
 
 ## 개인정보 주의
 
-**내부용이라 연락처(전화·이메일)를 포함**하고 있다.
-외부 공개 버전으로 바꿀 때는 `apps-script.gs`의 `INCLUDE_CONTACTS = false`로 바꾸고
-새 버전으로 재배포하면 연락처가 빠진다. (index.html의 SNAPSHOT에도 연락처가 있으니
-외부 공개 시 SNAPSHOT 갱신도 함께 요청할 것)
+GitHub Pages 공개 배포에 맞춰 **연락처(전화·이메일)는 어디에도 싣지 않는다.**
+`apps-script.gs`의 `INCLUDE_CONTACTS = false` 상태를 유지할 것 — 연락처가 필요하면 시트에서 직접 확인.
+비밀번호 게이트는 검색·우연 유입을 막는 캐주얼 차단이며 실질 인증이 아니므로,
+민감 정보를 추가해야 하면 Vercel 등 서버 검증 방식으로 옮길 것.
