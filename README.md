@@ -2,7 +2,7 @@
 
 테크포임팩트 캠퍼스 26-2 사회혁신조직 모집 현황을 보여주는 내부용 대시보드.
 
-- **대시보드 주소**: https://joan7403-dev.github.io/campus-apply-dashboard/ (비밀번호 게이트)
+- **대시보드 주소**: https://kakao-impact-foundation.github.io/campus-apply-dashboard/ (비밀번호 게이트)
 - 내부 공유용: 화면 앞 비밀번호(캐주얼 차단) + `noindex` 메타 + `robots.txt`로 검색 색인 차단
 - 소스에는 신청 데이터가 들어있지 않음 (모든 데이터는 열람 시점에 Apps Script에서 로드)
 
