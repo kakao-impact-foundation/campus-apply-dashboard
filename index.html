@@ -96,7 +96,8 @@
   .cardSub { font-size: 13.5px; color: var(--muted); margin-bottom: 16px; }
 
   /* ── map ────────────────────────────── */
-  #mapBox svg { width: 100%; height: auto; display: block; overflow: visible; }
+  #mapBox { display: flex; justify-content: center; }
+  #mapBox svg { width: auto; height: auto; max-width: 100%; max-height: min(58vh, 520px); display: block; overflow: visible; }
   .rgn { cursor: pointer; transition: fill .25s ease, filter .2s ease; }
   .rgn:hover { filter: brightness(.955); }
   .rgn.sel { stroke: var(--ink); stroke-width: 1.4; }
@@ -584,12 +585,6 @@ function renderMap(){
                 font-family="Pretendard, sans-serif">${esc(short)}</text>`;
     }
   });
-
-  /* 울릉도·독도 (경북권 소속 — 표시 위치는 동해 여백에 압축 배치) */
-  marks += `<text class="rgnName" x="615" y="263" text-anchor="middle" font-size="6.5"
-            font-weight="600" fill="var(--muted)" font-family="Pretendard, sans-serif">울릉도</text>
-            <text class="rgnName" x="648" y="277" text-anchor="middle" font-size="6.5"
-            font-weight="600" fill="var(--muted)" font-family="Pretendard, sans-serif">독도</text>`;
 
   document.getElementById('mapBox').innerHTML =
     `<svg viewBox="270 120 390 600" xmlns="http://www.w3.org/2000/svg" role="img"
