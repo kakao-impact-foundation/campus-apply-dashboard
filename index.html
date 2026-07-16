@@ -245,6 +245,14 @@
     font-weight: 700; font-size: 17px; margin-bottom: 8px;
     padding-right: 20px;
   }
+  .srcTag {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    border-radius: 999px; padding: 2px 8px; margin-left: 6px;
+    vertical-align: middle; letter-spacing: -0.02em;
+  }
+  .tYel { background: #fff3cd; color: #856404; }
+  .tGrn { background: #d4edda; color: #155724; }
+  .tBlu { background: #cce5ff; color: #004085; }
   .org .meta { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--body); flex-wrap: wrap; }
   .org .meta .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); flex: 0 0 auto; }
   .org .meta .rg { font-weight: 700; color: var(--ink); }
@@ -439,6 +447,12 @@
         <span class="chip">신청 조직 <b id="orgCount">0</b>팀</span>
         <span class="chip">목표 <b>24</b>팀</span>
       </div>
+      <div class="subStats">
+        <span class="chip">🟡 기참여 <b id="tagReturn">0</b></span>
+        <span class="chip">🟢 네트워크 <b id="tagNetwork">0</b></span>
+        <span class="chip">🔵 제안메일 <b id="tagProposal">0</b></span>
+        <span class="chip">공모 <b id="tagOpen">0</b></span>
+      </div>
     </div>
   </section>
 
@@ -525,6 +539,7 @@ function dedupeOrgs(rows){
       const o = map.get(key);
       o.people.push(r.name);
       o.rows.push(r);
+      if (r.tag && !o.tag) o.tag = r.tag;
       r.regions.forEach(rg => { if (!o.regions.includes(rg)) o.regions.push(rg); });
       splitFields(r.fields).forEach(f => { if (!o.fieldsArr.includes(f)) o.fieldsArr.push(f); });
     }
@@ -698,7 +713,7 @@ function renderOrgList(){
   list.innerHTML = orgs.map((o, i) => `
     <div class="org" style="animation-delay:${i * 0.06}s" data-key="${esc(o.key)}">
       <div class="over"><span>${esc(o.type.split('(')[0].replace(':','').trim())}</span><span>·</span><span>${esc(o.ts.slice(5,16))} 신청</span></div>
-      <div class="name">${esc(o.org)}</div>
+      <div class="name">${esc(o.org)}${o.tag && o.tag !== '공모' ? `<span class="srcTag ${o.tag === '기참여' ? 'tYel' : o.tag === '네트워크' ? 'tGrn' : 'tBlu'}">${esc(o.tag)}</span>` : ''}</div>
       <div class="meta">
         <span class="dot"></span><span class="rg">${esc(o.regions.join(' · '))}</span>
         <span class="sep">|</span><span>${esc(o.people.join(', '))}</span>
@@ -812,6 +827,14 @@ function render(data){
   countUp(document.getElementById('pct'), pct, '%');
   document.getElementById('appCount').textContent = rows.length;
   document.getElementById('orgCount').textContent = ORGS.length;
+  const nReturn = ORGS.filter(o => o.tag === '기참여').length;
+  const nNetwork = ORGS.filter(o => o.tag === '네트워크').length;
+  const nProposal = ORGS.filter(o => o.tag === '제안메일').length;
+  const nOpen = ORGS.length - nReturn - nNetwork - nProposal;
+  document.getElementById('tagReturn').textContent = nReturn;
+  document.getElementById('tagNetwork').textContent = nNetwork;
+  document.getElementById('tagProposal').textContent = nProposal;
+  document.getElementById('tagOpen').textContent = nOpen;
   document.getElementById('updated').textContent =
     `기준: ${data.updatedAt}` + (DATA_URL ? ' · 시트 자동 연동' : ' · 수동 저장본');
   requestAnimationFrame(() => {

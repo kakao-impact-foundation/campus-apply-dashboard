@@ -45,12 +45,25 @@ function doGet() {
   const iQuest  = col('질문');            // Q15
   const iOutput = col('결과물');          // Q16
 
+  // H열(index 7) 배경색으로 기참여 여부 판별
+  const dataRange = sheet.getRange(2, 8, values.length - 1, 1); // H열, 데이터 행만
+  const bgColors = dataRange.getBackgrounds().map(r => r[0]);
+
   const tz = ss.getSpreadsheetTimeZone();
   const str = (row, i) => i >= 0 ? String(row[i] || '').trim() : '';
 
+  // 노란색=기참여, 초록색=네트워크, 파란색=제안메일, 그 외(보라/없음 등)=공모
+  // 노란색=기참여, 초록색=네트워크, 파란색=제안메일, 그 외=공모
+  const colorTag = (hex) => {
+    const h = (hex || '').toLowerCase();
+    if (h === '#ffd966') return '기참여';
+    if (h === '#93c47d') return '네트워크';
+    if (h === '#6fa8dc') return '제안메일';
+    return '공모';
+  };
+
   const rows = values.slice(1)
-    .filter(r => str(r, iOrg))
-    .map(r => ({
+    .map((r, i) => ({
       ts: r[iTs] instanceof Date
         ? Utilities.formatDate(r[iTs], tz, 'yyyy-MM-dd HH:mm')
         : String(r[iTs]),
@@ -68,8 +81,9 @@ function doGet() {
       link: str(r, iLink),
       reason: str(r, iReason),
       questions: str(r, iQuest),
-      outcome: str(r, iOutput)
-    }));
+      outcome: str(r, iOutput),
+      tag: colorTag(bgColors[i] || '')
+    })).filter(r => r.org);
 
   const payload = {
     updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'),
