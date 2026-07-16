@@ -81,7 +81,7 @@
   /* ── layout ─────────────────────────── */
   .grid {
     display: grid;
-    grid-template-columns: minmax(0, 7fr) minmax(330px, 4fr);
+    grid-template-columns: minmax(0, 5fr) minmax(330px, 6fr);
     gap: 22px;
     align-items: start;
   }
@@ -96,6 +96,7 @@
   .cardSub { font-size: 13.5px; color: var(--muted); margin-bottom: 16px; }
 
   /* ── map ────────────────────────────── */
+  #mapCard { max-width: 520px; }
   #mapBox svg { width: 100%; height: auto; display: block; overflow: visible; }
   .rgn { cursor: pointer; transition: fill .25s ease, filter .2s ease; }
   .rgn:hover { filter: brightness(.955); }
@@ -116,10 +117,11 @@
   .legend .bar { width: 110px; height: 10px; border-radius: 999px; }
 
   .natPill {
-    display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    background: var(--white); border-radius: 999px;
-    padding: 8px 16px; margin-bottom: 14px;
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    background: var(--white); border-radius: 14px;
+    padding: 14px 18px; margin-bottom: 14px;
     font-size: 13px; color: var(--body); font-weight: 600;
+    line-height: 1.7;
   }
   .natPill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); flex: 0 0 auto; }
   .natPill b { font-weight: 800; color: var(--ink); }
@@ -714,13 +716,27 @@ function linkify(s){
     u => `<a href="${u.startsWith('http') ? u : 'https://' + u}" target="_blank" rel="noopener">${u}</a>`);
 }
 function questionList(q){
-  const parts = String(q || '').split(/\s*(?=\d\s*[.)．])/).map(s => s.trim()).filter(Boolean);
-  if (parts.length < 2) return q ? `<p>${esc(q)}</p>` : '';
-  return `<ol>${parts.map(p => {
-    const m = p.match(/^(\d+)\s*[.)．]\s*(.*)$/s);
-    return m ? `<li><span class="qn">Q${m[1]}</span><span>${esc(m[2])}</span></li>`
-             : `<li><span>${esc(p)}</span></li>`;
-  }).join('')}</ol>`;
+  const raw = String(q || '').trim();
+  if (!raw) return '';
+  /* "질문 1 ...", "질문1. ..." 패턴 */
+  const koParts = raw.split(/\s*(?=질문\s*\d)/).map(s => s.trim()).filter(Boolean);
+  if (koParts.length >= 2) {
+    return `<ol>${koParts.map(p => {
+      const m = p.match(/^질문\s*(\d+)[.)．:]?\s*(.*)$/s);
+      return m ? `<li><span class="qn">Q${m[1]}</span><span>${esc(m[2])}</span></li>`
+               : `<li><span>${esc(p)}</span></li>`;
+    }).join('')}</ol>`;
+  }
+  /* "1. ...", "2) ..." 패턴 */
+  const numParts = raw.split(/\s*(?=\d\s*[.)．])/).map(s => s.trim()).filter(Boolean);
+  if (numParts.length >= 2) {
+    return `<ol>${numParts.map(p => {
+      const m = p.match(/^(\d+)\s*[.)．]\s*(.*)$/s);
+      return m ? `<li><span class="qn">Q${m[1]}</span><span>${esc(m[2])}</span></li>`
+               : `<li><span>${esc(p)}</span></li>`;
+    }).join('')}</ol>`;
+  }
+  return `<p>${esc(raw)}</p>`;
 }
 function personBlock(r, headline){
   return `
@@ -734,9 +750,9 @@ function personBlock(r, headline){
       <div class="mRow"><span class="k">알게 된 경로</span><span class="v">${esc(r.path || '-')}</span></div>
       <div class="mRow" style="grid-column:1/-1"><span class="k">홈페이지 · SNS</span><span class="v">${r.link ? linkify(r.link) : '-'}</span></div>
     </div>
+    ${r.questions ? `<div class="mSec"><h3>학생들과 함께 풀고 싶은 질문</h3>${questionList(r.questions)}</div>` : ''}
     ${r.intro ? `<div class="mSec"><h3>조직 소개</h3><p>${esc(r.intro)}</p></div>` : ''}
     ${r.reason ? `<div class="mSec"><h3>참여하고 싶은 이유</h3><p>${esc(r.reason)}</p></div>` : ''}
-    ${r.questions ? `<div class="mSec"><h3>학생들과 함께 풀고 싶은 질문</h3>${questionList(r.questions)}</div>` : ''}
     ${r.outcome ? `<div class="mSec"><h3>기대하는 결과물 수준</h3><span class="mOutcome">${esc(r.outcome)}</span></div>` : ''}`;
 }
 
