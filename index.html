@@ -472,7 +472,8 @@
         <span class="count" id="listCount"></span>
         <button class="reset" id="resetBtn">필터 초기화</button>
       </div>
-      <div class="kwRow rise" id="kwRow" style="animation-delay:.22s"></div>
+      <div class="kwRow rise" id="tagRow" style="animation-delay:.22s"></div>
+      <div class="kwRow rise" id="kwRow" style="animation-delay:.26s"></div>
       <div class="orgList" id="orgList"></div>
     </div>
   </div>
@@ -517,6 +518,7 @@ let BY_REGION = {};     // 권역별 조직 목록
 let NAT_ORGS = [];      // 전국 활동 조직
 let selected = null;    // 선택된 권역
 let keyword = null;     // 선택된 활동 분야
+let tagFilter = null;   // 선택된 유입 경로
 
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -692,6 +694,26 @@ function renderKeywords(){
     }));
 }
 
+/* ── 유입 경로 필터 ── */
+const TAG_ORDER = ['기참여', '네트워크', '제안메일', '공모'];
+const TAG_EMOJI = {'기참여': '🟡', '네트워크': '🟢', '제안메일': '🔵', '공모': ''};
+function renderTagFilter(){
+  const counts = {};
+  TAG_ORDER.forEach(t => counts[t] = 0);
+  ORGS.forEach(o => counts[o.tag || '공모'] = (counts[o.tag || '공모'] || 0) + 1);
+  document.getElementById('tagRow').innerHTML =
+    `<button class="kw ${!tagFilter ? 'on' : ''}" data-tag="">전체<span class="n">${ORGS.length}</span></button>` +
+    TAG_ORDER.map(t =>
+      `<button class="kw ${tagFilter === t ? 'on' : ''}" data-tag="${esc(t)}">${TAG_EMOJI[t] ? TAG_EMOJI[t] + ' ' : ''}${esc(t)}<span class="n">${counts[t]}</span></button>`
+    ).join('');
+  document.querySelectorAll('#tagRow .kw').forEach(btn =>
+    btn.addEventListener('click', () => {
+      tagFilter = btn.dataset.tag || null;
+      renderTagFilter();
+      renderOrgList();
+    }));
+}
+
 /* ── 조직 리스트 ── */
 function renderOrgList(){
   const list = document.getElementById('orgList');
@@ -699,10 +721,11 @@ function renderOrgList(){
   const countEl = document.getElementById('listCount');
 
   let orgs = [...ORGS].sort((a,b) => b.ts.localeCompare(a.ts));
-  if (selected) orgs = orgs.filter(o => o.regions.includes(selected) || o.regions.includes(NATIONWIDE));
-  if (keyword)  orgs = orgs.filter(o => o.fieldsArr.includes(keyword));
+  if (selected)  orgs = orgs.filter(o => o.regions.includes(selected) || o.regions.includes(NATIONWIDE));
+  if (keyword)   orgs = orgs.filter(o => o.fieldsArr.includes(keyword));
+  if (tagFilter) orgs = orgs.filter(o => (o.tag || '공모') === tagFilter);
 
-  const filters = [selected, keyword].filter(Boolean);
+  const filters = [selected, keyword, tagFilter].filter(Boolean);
   reset.classList.toggle('on', filters.length > 0);
   countEl.textContent = (filters.length ? filters.join(' · ') + ' ' : '') + orgs.length + '팀';
 
@@ -822,7 +845,7 @@ function render(data){
     });
   });
 
-  const pct = Math.min(100, Math.round(ORGS.length / GOAL * 100));
+  const pct = Math.round(ORGS.length / GOAL * 100);
   countUp(document.getElementById('teamCount'), ORGS.length);
   countUp(document.getElementById('pct'), pct, '%');
   document.getElementById('appCount').textContent = rows.length;
@@ -850,15 +873,18 @@ function render(data){
   renderMap();
   renderDetail();
   renderKeywords();
+  renderTagFilter();
   renderOrgList();
 }
 
 document.getElementById('resetBtn').addEventListener('click', () => {
   selected = null;
   keyword = null;
+  tagFilter = null;
   applySelection();
   renderDetail();
   renderKeywords();
+  renderTagFilter();
   renderOrgList();
 });
 
