@@ -58,6 +58,11 @@ function doGet() {
     const m = s.match(/^(\d순위)/);
     return m ? m[1] : '4순위';
   };
+  // U열 원본 구분 값: "1순위 - 기참여" 등. 빈 값은 공개모집(기본 유입)으로
+  const parseTagFull = (val) => {
+    const s = String(val || '').trim();
+    return s || '4순위 - 공개모집';
+  };
 
   const rows = values.slice(1)
     .map((r, i) => ({
@@ -79,7 +84,8 @@ function doGet() {
       reason: str(r, iReason),
       questions: str(r, iQuest),
       outcome: str(r, iOutput),
-      tag: parseTag(str(r, iTag))
+      tag: parseTag(str(r, iTag)),
+      tagFull: parseTagFull(str(r, iTag))
     })).filter(r => r.org);
 
   const payload = {

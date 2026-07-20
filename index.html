@@ -590,6 +590,7 @@ function dedupeOrgs(rows){
       o.people.push(r.name);
       o.rows.push(r);
       if (r.tag && !o.tag) o.tag = r.tag;
+      if (r.tagFull && !o.tagFull) o.tagFull = r.tagFull;
       r.regions.forEach(rg => { if (!o.regions.includes(rg)) o.regions.push(rg); });
       splitFields(r.fields).forEach(f => { if (!o.fieldsArr.includes(f)) o.fieldsArr.push(f); });
     }
@@ -742,18 +743,28 @@ function renderKeywords(){
     }));
 }
 
-/* ── 유입 경로 필터 ── */
-const TAG_ORDER = ['1순위', '2순위', '3순위', '4순위'];
+/* ── 유입 경로(참가자 구분) 필터 — 시트 U열 값 그대로 ── */
 const TAG_EMOJI = {'1순위': '🟡', '2순위': '🟢', '3순위': '🔵', '4순위': ''};
+/* 조직의 참가자 구분: U열 원본("1순위 - 기참여") 우선, 구버전 API면 순위만 */
+function tagFullOf(o){
+  return o.tagFull || ((o.tag && o.tag !== '4순위') ? o.tag : '4순위 - 공개모집');
+}
+/* "1순위 - 기참여" → {rank:"1순위", detail:"기참여"} */
+function tagParts(full){
+  const m = String(full).match(/^(\d순위)\s*-?\s*(.*)$/);
+  return m ? { rank: m[1], detail: m[2].trim() } : { rank: '', detail: String(full) };
+}
 function renderTagFilter(){
   const counts = {};
-  TAG_ORDER.forEach(t => counts[t] = 0);
-  ORGS.forEach(o => counts[o.tag || '4순위'] = (counts[o.tag || '4순위'] || 0) + 1);
+  ORGS.forEach(o => { const t = tagFullOf(o); counts[t] = (counts[t] || 0) + 1; });
+  const tags = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'ko'));
   document.getElementById('tagRow').innerHTML =
     `<button class="kw ${!tagFilter ? 'on' : ''}" data-tag="">전체<span class="n">${ORGS.length}</span></button>` +
-    TAG_ORDER.map(t =>
-      `<button class="kw ${tagFilter === t ? 'on' : ''}" data-tag="${esc(t)}">${TAG_EMOJI[t] ? TAG_EMOJI[t] + ' ' : ''}${esc(t)}<span class="n">${counts[t]}</span></button>`
-    ).join('');
+    tags.map(t => {
+      const p = tagParts(t);
+      const emoji = TAG_EMOJI[p.rank] || '';
+      return `<button class="kw ${tagFilter === t ? 'on' : ''}" data-tag="${esc(t)}">${emoji ? emoji + ' ' : ''}${esc(p.detail || p.rank)}<span class="n">${counts[t]}</span></button>`;
+    }).join('');
   document.querySelectorAll('#tagRow .kw').forEach(btn =>
     btn.addEventListener('click', () => {
       tagFilter = btn.dataset.tag || null;
@@ -843,9 +854,9 @@ function renderOrgList(){
   let orgs = [...ORGS].sort((a,b) => b.ts.localeCompare(a.ts));
   if (selected)  orgs = orgs.filter(o => o.regions.includes(selected) || o.regions.includes(NATIONWIDE));
   if (keyword)   orgs = orgs.filter(o => o.fieldsArr.includes(keyword));
-  if (tagFilter) orgs = orgs.filter(o => (o.tag || '4순위') === tagFilter);
+  if (tagFilter) orgs = orgs.filter(o => tagFullOf(o) === tagFilter);
 
-  const filters = [selected, keyword, tagFilter].filter(Boolean);
+  const filters = [selected, keyword, tagFilter && tagParts(tagFilter).detail].filter(Boolean);
   reset.classList.toggle('on', filters.length > 0);
   countEl.textContent = (filters.length ? filters.join(' · ') + ' ' : '') + orgs.length + '팀';
 
@@ -856,7 +867,7 @@ function renderOrgList(){
   list.innerHTML = orgs.map((o, i) => `
     <div class="org" style="animation-delay:${i * 0.06}s" data-key="${esc(o.key)}">
       <div class="over"><span>${esc(o.type.split('(')[0].replace(':','').trim())}</span><span>·</span><span>${esc(o.ts.slice(5,16))} 신청</span></div>
-      <div class="name">${esc(o.org)}${o.tag && o.tag !== '4순위' ? `<span class="srcTag ${o.tag === '1순위' ? 'tYel' : o.tag === '2순위' ? 'tGrn' : 'tBlu'}">${esc(o.tag)}</span>` : ''}</div>
+      <div class="name">${esc(o.org)}${o.tag && o.tag !== '4순위' ? `<span class="srcTag ${o.tag === '1순위' ? 'tYel' : o.tag === '2순위' ? 'tGrn' : 'tBlu'}">${esc(tagParts(tagFullOf(o)).detail || o.tag)}</span>` : ''}</div>
       <div class="meta">
         <span class="dot"></span><span class="rg">${esc(o.regions.join(' · '))}</span>
         <span class="sep">|</span><span>${esc(o.people.join(', '))}</span>
@@ -924,6 +935,7 @@ function openOrg(key){
     <div class="mOver"><span>${esc(o.type.replace(/:\s*$/,''))}</span><span>·</span><span>${esc(o.ts.slice(0,16))} 첫 신청</span>${o.rows.length > 1 ? `<span>·</span><span>신청 ${o.rows.length}건</span>` : ''}</div>
     <div class="mName">${esc(o.org)}</div>
     <div class="mChips">
+      <span>${TAG_EMOJI[tagParts(tagFullOf(o)).rank] || '🏷️'} ${esc(tagFullOf(o))}</span>
       ${o.regions.map(r => `<span>📍 ${esc(r)}</span>`).join('')}
       ${o.fieldsArr.map(f => `<span class="gray">${esc(f)}</span>`).join('')}
     </div>
