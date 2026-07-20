@@ -620,12 +620,12 @@
   <div id="page-compare" style="display:none">
     <div class="cmpHeader">
       <h2>전체 신청 vs <em>확정자</em> 비교</h2>
-      <p>기준일 2026.07.20 · 전체 73건 → 확정 25명 (선발률 34%)</p>
+      <p>기준일 2026.07.20 · 전체 73건 → 확정 24명 (선발률 33%)</p>
     </div>
     <div class="cmpSummary">
       <div class="sc"><div class="n">73</div><div class="l">전체 신청</div></div>
-      <div class="sc accent"><div class="n">25</div><div class="l">확정</div></div>
-      <div class="sc"><div class="n">34%</div><div class="l">선발률</div></div>
+      <div class="sc accent"><div class="n">24</div><div class="l">확정</div></div>
+      <div class="sc"><div class="n">33%</div><div class="l">선발률</div></div>
       <div class="sc"><div class="n">72%</div><div class="l">확정 중 1~2순위</div></div>
     </div>
     <div class="cmpGrid2">
@@ -1519,7 +1519,7 @@ function initCmpCharts(){
   function d(a,c){
     return [
       {label:'전체 (73명)',data:a,backgroundColor:aC,borderRadius:4,barPercentage:.7,categoryPercentage:.75},
-      {label:'확정 (25명)',data:c,backgroundColor:cC,borderRadius:4,barPercentage:.7,categoryPercentage:.75}
+      {label:'확정 (24명)',data:c,backgroundColor:cC,borderRadius:4,barPercentage:.7,categoryPercentage:.75}
     ];
   }
   new Chart(document.getElementById('cmpC1'),{type:'bar',
