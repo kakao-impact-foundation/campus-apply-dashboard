@@ -115,6 +115,19 @@
     margin-top: 14px; font-size: 12px; color: var(--muted); font-weight: 600;
   }
   .legend .bar { width: 110px; height: 10px; border-radius: 999px; }
+  .legend .uDot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; margin-left: 6px; }
+  .legend .uDot:first-child { margin-left: 0; }
+
+  /* ── 지도 레이어 토글 · 최종 구분 필터 ── */
+  .mapCtrl { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-bottom: 10px; }
+  .mapCtrl .lbl { font-size: 12px; font-weight: 700; color: var(--muted); margin-right: 2px; }
+  .mapCtrl .kw { background: var(--white); padding: 7px 13px; font-size: 12.5px; }
+  .mapCtrl .kw.on { background: var(--ink); }
+  .uniPin {
+    transform-box: fill-box; transform-origin: center;
+    animation: pop .45s cubic-bezier(.3,1.4,.4,1) backwards;
+  }
+  .uniPin text { pointer-events: none; }
 
   .natPill {
     display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
@@ -506,9 +519,12 @@
   <div class="grid">
     <section class="card rise" id="mapCard" style="animation-delay:.12s">
       <div class="cardTitle">활동 지역</div>
-      <div class="cardSub">지역을 클릭하면 신청한 조직을 볼 수 있어요</div>
+      <div class="cardSub">🏫 참여 대학과 📍 사회혁신가를 레이어로 겹쳐 볼 수 있어요 · 지역을 클릭해 보세요</div>
+      <div class="mapCtrl" id="layerRow"></div>
+      <div class="mapCtrl" id="finalRow"></div>
       <div id="natPill"></div>
       <div id="mapBox"></div>
+      <div class="legend" id="uniLegend"></div>
       <div class="legend" id="shadeLegend"></div>
       <div id="regionDetail" class="detail"></div>
     </section>
@@ -564,8 +580,48 @@ const GOAL = 24;
 const RATERS = ['헤이븐', '조안', '준'];
 let RATINGS = {};       // { 조직키: { 평가자: 점수 } }
 let ORGS = [];          // dedupe된 조직 목록
-let BY_REGION = {};     // 권역별 조직 목록
-let NAT_ORGS = [];      // 전국 활동 조직
+let MAP_ORGS = [];      // 지도 표시 대상 (최종 구분 필터 적용)
+let BY_REGION = {};     // 권역별 조직 목록 (필터 적용)
+let NAT_ORGS = [];      // 전국 활동 조직 (필터 적용)
+
+/* ── 지도 레이어 & 최종 구분 필터 상태 ── */
+let showUniv = true;    // 🏫 참여 대학 레이어
+let showOrgs = true;    // 📍 사회혁신가 레이어
+let finalFilter = 'pick'; // 'pick'=확정·보류 | '확정' | '보류' | 'all'
+const FINAL_OPTS = [['pick','확정·보류'], ['확정','확정'], ['보류','보류'], ['all','전체']];
+
+/* 시트 X열(최종 참가자 구분) 데이터가 아직 안 내려오면 필터를 끄고 전체를 보여줘요 */
+function hasFinalData(){ return ORGS.some(o => o.final); }
+function matchesFinal(o){
+  if (!hasFinalData() || finalFilter === 'all') return true;
+  const f = String(o.final || '');
+  return finalFilter === 'pick' ? /확정|보류/.test(f) : f.includes(finalFilter);
+}
+
+/* ── 참여 대학 (캠퍼스 주소지 기준) ── */
+const UNI_GROUPS = {
+  A: { label: '서울권',            color: '#3B82F6' },
+  B: { label: '경기·충청·대전·전라', color: '#0FA36B' },
+  C: { label: '강원·경상',          color: '#E8830C' }
+};
+const UNIVERSITIES = [
+  { name:'서울대',       group:'A', lat:37.4599, lng:126.9519, anchor:'end',   dx:-5, dy:4 },
+  { name:'서울시립대',   group:'A', lat:37.5834, lng:127.0587, anchor:'start', dx:5,  dy:2 },
+  { name:'서울여대',     group:'A', lat:37.6283, lng:127.0900, anchor:'start', dx:5,  dy:-1 },
+  { name:'동국대',       group:'A', lat:37.5581, lng:127.0000, anchor:'end',   dx:-5, dy:0 },
+  { name:'가천대',       group:'B', lat:37.4510, lng:127.1275, anchor:'start', dx:5,  dy:3 },
+  { name:'고려대(세종)', group:'B', lat:36.6110, lng:127.2871, anchor:'start', dx:5,  dy:2 },
+  { name:'KAIST',        group:'B', lat:36.3721, lng:127.3604, anchor:'start', dx:5,  dy:3 },
+  { name:'GIST',         group:'B', lat:35.2280, lng:126.8430, anchor:'end',   dx:-5, dy:2 },
+  { name:'한라대',       group:'C', lat:37.3200, lng:127.9800 },
+  { name:'경운대',       group:'C', lat:36.2500, lng:128.4600, anchor:'end',   dx:-5, dy:2 },
+  { name:'부산외대',     group:'C', lat:35.2740, lng:129.0870 },
+  { name:'UNIST',        group:'C', lat:35.5720, lng:129.1900, anchor:'start', dx:5, dy:2 },
+  { name:'DGIST',        group:'C', lat:35.6910, lng:128.4580, anchor:'end',   dx:-5, dy:2 }
+];
+/* 위경도 → 지도 SVG 좌표 (제주·서울·호미곶·고성 기준점으로 보정한 등장방형 변환) */
+const lngToX = lng => 326 + (lng - 126.55) * 86.4;
+const latToY = lat => 685 - (lat - 33.37) * 105.9;
 let selected = null;    // 선택된 권역
 let keyword = null;     // 선택된 활동 분야
 let tagFilter = null;   // 선택된 순위 (1순위, 2순위 ...)
@@ -594,6 +650,7 @@ function dedupeOrgs(rows){
       o.rows.push(r);
       if (r.tag && !o.tag) o.tag = r.tag;
       if (r.tagSub && !o.tagSub) o.tagSub = r.tagSub;
+      if (r.final && !o.final) o.final = r.final;
       r.regions.forEach(rg => { if (!o.regions.includes(rg)) o.regions.push(rg); });
       splitFields(r.fields).forEach(f => { if (!o.fieldsArr.includes(f)) o.fieldsArr.push(f); });
     }
@@ -624,17 +681,66 @@ function shade(n){
   return `hsl(304, 68%, ${l}%)`;
 }
 
+/* ── 지도 데이터: 최종 구분 필터를 적용해 권역별 목록 재구성 ── */
+function rebuildMapData(){
+  MAP_ORGS = showOrgs ? ORGS.filter(matchesFinal) : [];
+  BY_REGION = {};
+  Object.keys(REGIONS).forEach(k => BY_REGION[k] = []);
+  NAT_ORGS = [];
+  MAP_ORGS.forEach(o => {
+    o.regions.forEach(rg => {
+      const key = rg.trim();
+      if (key === NATIONWIDE) { NAT_ORGS.push(o); return; }
+      const match = Object.keys(REGIONS).find(k => key === k || key.startsWith(k.split('/')[0]));
+      if (match && !BY_REGION[match].includes(o)) BY_REGION[match].push(o);
+    });
+  });
+}
+
+/* ── 지도 레이어 토글 + 최종 구분 필터 UI ── */
+function renderMapCtrl(){
+  const orgN = showOrgs ? MAP_ORGS.length : ORGS.filter(matchesFinal).length;
+  document.getElementById('layerRow').innerHTML = `
+    <span class="lbl">레이어</span>
+    <button class="kw ${showUniv ? 'on' : ''}" id="lyrUniv">🏫 참여 대학<span class="n">${UNIVERSITIES.length}</span></button>
+    <button class="kw ${showOrgs ? 'on' : ''}" id="lyrOrgs">📍 사회혁신가<span class="n">${orgN}</span></button>`;
+  document.getElementById('lyrUniv').addEventListener('click', () => { showUniv = !showUniv; updateMapUI(); });
+  document.getElementById('lyrOrgs').addEventListener('click', () => { showOrgs = !showOrgs; updateMapUI(); });
+
+  const fr = document.getElementById('finalRow');
+  if (!showOrgs) { fr.innerHTML = ''; return; }
+  if (!hasFinalData()) {
+    fr.innerHTML = ORGS.length ? `<span class="lbl">최종 구분 데이터가 아직 없어 전체 조직을 보여줘요</span>` : '';
+    return;
+  }
+  fr.innerHTML = `<span class="lbl">최종 구분</span>` + FINAL_OPTS.map(([v, label]) => {
+    const n = v === 'all' ? ORGS.length
+            : ORGS.filter(o => v === 'pick' ? /확정|보류/.test(o.final || '') : String(o.final || '').includes(v)).length;
+    return `<button class="kw ${finalFilter === v ? 'on' : ''}" data-ff="${v}">${label}<span class="n">${n}</span></button>`;
+  }).join('');
+  fr.querySelectorAll('[data-ff]').forEach(btn =>
+    btn.addEventListener('click', () => { finalFilter = btn.dataset.ff; updateMapUI(); }));
+}
+
+function updateMapUI(){
+  rebuildMapData();
+  renderMapCtrl();
+  renderMap();
+  renderNatPill();
+  renderDetail();
+}
+
 /* ── 지도 ── */
 function renderMap(){
   let shapes = '', marks = '';
   Object.keys(REGION_SHAPES).forEach(rg => {
     shapes += `<path class="rgn" data-region="${esc(rg)}" d="${REGION_SHAPES[rg]}"
-               fill="${shade((BY_REGION[rg] || []).length)}"
+               fill="${showOrgs ? shade((BY_REGION[rg] || []).length) : '#FFFFFF'}"
                stroke="var(--card)" stroke-width="1.6" stroke-linejoin="round"/>`;
   });
   let i = 0;
   Object.entries(REGIONS).forEach(([rg, [ax, ay]]) => {
-    const n = (BY_REGION[rg] || []).length;
+    const n = showOrgs ? (BY_REGION[rg] || []).length : 0;
     const short = rg === '대전/세종/충청' ? '충청' : rg === '부산/울산/경남' ? '경남권' :
                   rg === '광주/전라' ? '전라' : rg === '경기/인천' ? '경기·인천' :
                   rg === '대구/경북' ? '경북권' : rg;
@@ -656,9 +762,28 @@ function renderMap(){
     }
   });
 
+  /* 🏫 대학 레이어: 캠퍼스 위치 핀 */
+  let unis = '';
+  if (showUniv) {
+    UNIVERSITIES.forEach((u, j) => {
+      const x = lngToX(u.lng), y = latToY(u.lat);
+      const c = UNI_GROUPS[u.group].color;
+      unis += `
+        <g class="uniPin" style="animation-delay:${.5 + j*0.04}s">
+          <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.1" fill="${c}" stroke="#fff" stroke-width="1.2">
+            <title>${esc(u.name)} · ${u.group}그룹 ${esc(UNI_GROUPS[u.group].label)}</title>
+          </circle>
+          <text x="${(x + (u.dx || 0)).toFixed(1)}" y="${(y + (u.dy ?? 9)).toFixed(1)}"
+                text-anchor="${u.anchor || 'middle'}" font-size="5.8" font-weight="800"
+                fill="${c}" paint-order="stroke" stroke="#fff" stroke-width="2" stroke-linejoin="round"
+                font-family="Pretendard, sans-serif">${esc(u.name)}</text>
+        </g>`;
+    });
+  }
+
   document.getElementById('mapBox').innerHTML =
     `<svg viewBox="270 120 390 600" xmlns="http://www.w3.org/2000/svg" role="img"
-          aria-label="신청 조직 활동 지역 지도">${shapes}${marks}</svg>`;
+          aria-label="참여 대학과 신청 조직 활동 지역 지도">${shapes}${marks}${unis}</svg>`;
 
   document.querySelectorAll('#mapBox [data-region]').forEach(el => {
     el.addEventListener('click', () => selectRegion(el.dataset.region));
@@ -666,11 +791,26 @@ function renderMap(){
   applySelection();
 
   const mc = maxCount();
-  document.getElementById('shadeLegend').innerHTML = ORGS.length ? `
-    <span>신청 조직 수</span>
+  const cntLabel = (!hasFinalData() || finalFilter === 'all') ? '신청 조직 수'
+                 : finalFilter === 'pick' ? '확정·보류 조직 수' : `${finalFilter} 조직 수`;
+  document.getElementById('shadeLegend').innerHTML = (showOrgs && MAP_ORGS.length) ? `
+    <span>${cntLabel}</span>
     <span>1팀</span>
     <span class="bar" style="background:linear-gradient(to right, ${shade(1)}, ${shade(mc)})"></span>
     <span>${mc}팀</span>` : '';
+  document.getElementById('uniLegend').innerHTML = showUniv
+    ? Object.entries(UNI_GROUPS).map(([g, {label, color}]) =>
+        `<span class="uDot" style="background:${color}"></span><span>${g} ${esc(label)}</span>`).join('')
+    : '';
+}
+
+/* ── 전국 활동 조직 안내 (사회혁신가 레이어 기준) ── */
+function renderNatPill(){
+  const nat = document.getElementById('natPill');
+  const uniqNat = [...new Set(NAT_ORGS.map(o => o.org))];
+  nat.innerHTML = (showOrgs && uniqNat.length)
+    ? `<div class="natPill"><span class="dot"></span><b>전국 활동 ${uniqNat.length}팀</b> ${uniqNat.map(esc).join(', ')}</div>`
+    : '';
 }
 
 /* ── 지역 선택: 테두리 강조 + 나머지 라벨 흐림 ── */
@@ -704,7 +844,7 @@ function renderDetail(){
   const box = document.getElementById('regionDetail');
   if (!selected) {
     box.className = 'detail show';
-    box.innerHTML = `<div class="dTitle">전체 지역 <span class="dHint">지도를 클릭해 지역별 신청 조직을 확인해 보세요</span></div>`;
+    box.innerHTML = `<div class="dTitle">전체 지역 <span class="dHint">지도를 클릭해 지역별 조직을 확인해 보세요</span></div>`;
     return;
   }
   const local = BY_REGION[selected] || [];
@@ -723,7 +863,7 @@ function renderDetail(){
         <span class="tag">${esc(it.org.type.split('(')[0].replace(':','').trim())}</span>
         ${it.nat ? '<span class="tag">전국 활동</span>' : ''}
       </li>`).join('')}</ul>`
-      : '<div class="none">아직 이 지역에서 신청한 조직이 없어요.</div>'}`;
+      : '<div class="none">이 지역에 해당하는 조직이 없어요.</div>'}`;
   box.querySelectorAll('li[data-key]').forEach(li =>
     li.addEventListener('click', () => openOrg(li.dataset.key)));
 }
@@ -998,17 +1138,7 @@ function render(data){
   const rows = data.rows;
   RATINGS = data.ratings || {};
   ORGS = dedupeOrgs(rows);
-  BY_REGION = {};
-  Object.keys(REGIONS).forEach(k => BY_REGION[k] = []);
-  NAT_ORGS = [];
-  ORGS.forEach(o => {
-    o.regions.forEach(rg => {
-      const key = rg.trim();
-      if (key === NATIONWIDE) { NAT_ORGS.push(o); return; }
-      const match = Object.keys(REGIONS).find(k => key === k || key.startsWith(k.split('/')[0]));
-      if (match && !BY_REGION[match].includes(o)) BY_REGION[match].push(o);
-    });
-  });
+  rebuildMapData();
 
   const pct = Math.round(ORGS.length / GOAL * 100);
   countUp(document.getElementById('teamCount'), ORGS.length);
@@ -1029,13 +1159,9 @@ function render(data){
     document.getElementById('meterFill').style.width = pct + '%';
   });
 
-  const nat = document.getElementById('natPill');
-  const uniqNat = [...new Set(NAT_ORGS.map(o => o.org))];
-  nat.innerHTML = uniqNat.length
-    ? `<div class="natPill"><span class="dot"></span><b>전국 활동 ${uniqNat.length}팀</b> ${uniqNat.map(esc).join(', ')}</div>`
-    : '';
-
+  renderMapCtrl();
   renderMap();
+  renderNatPill();
   renderDetail();
   renderKeywords();
   renderTagFilter();
