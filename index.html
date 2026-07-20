@@ -713,8 +713,8 @@ function maxCount(){
 function shade(n){
   if (!n) return '#FFFFFF';
   const t = n / maxCount();
-  const l = 92 - 25 * t;   /* 밝기 92%(연함) → 67%(#E470DC) */
-  return `hsl(304, 68%, ${l}%)`;
+  const l = 93 - 20 * t;   /* 중립 그레이: 밝기 93%(연함) → 73%(진함) — 대학 그룹 색이 돋보이게 */
+  return `hsl(220, 8%, ${l}%)`;
 }
 
 /* ── 지도 데이터: 최종 구분 필터를 적용해 권역별 목록 재구성 ── */
@@ -755,7 +755,14 @@ function renderMapCtrl(){
     return `<button class="kw ${finalFilter === v ? 'on' : ''}" data-ff="${v}">${label}<span class="n">${n}</span></button>`;
   }).join('');
   fr.querySelectorAll('[data-ff]').forEach(btn =>
-    btn.addEventListener('click', () => { finalFilter = btn.dataset.ff; updateMapUI(); }));
+    btn.addEventListener('click', () => {
+      finalFilter = btn.dataset.ff;
+      /* 오른쪽 신청 조직 리스트도 같은 구분으로 연동 (전체는 리스트 필터 해제) */
+      finalListFilter = finalFilter === 'all' ? null : finalFilter;
+      updateMapUI();
+      renderFinalListFilter();
+      renderOrgList();
+    }));
 }
 
 function updateMapUI(){
