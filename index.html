@@ -138,10 +138,10 @@
   .mUnis { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
   .mUnis span { font-size: 12px; font-weight: 700; color: var(--body); background: var(--white); border-radius: 999px; padding: 4px 10px; }
   .mList { list-style: none; display: flex; flex-direction: column; gap: 9px; }
-  .mList li { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; animation: rise .35s ease both; }
+  .mList li { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--ink); cursor: pointer; animation: rise .35s ease both; }
   .mList li .gDot { width: 7px; height: 7px; }
   .mList li:hover .mName { color: var(--pink-text); }
-  .mName { flex: 1; min-width: 0; }
+  .mName { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fChip { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 2px 9px; background: var(--white); color: var(--muted); flex: 0 0 auto; }
   .fChip.ok { background: var(--ink); color: #fff; }
   .mCard .none { font-size: 14px; color: var(--muted); }
