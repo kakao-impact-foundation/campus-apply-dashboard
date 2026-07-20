@@ -48,7 +48,10 @@ function doGet() {
   const iOutput = col('결과물');          // Q16
 
   const iTag    = col('참가자 구분');    // U열 ('최종 참가자 구분'보다 앞이라 U열이 먼저 잡혀요)
-  const iFinal  = col('최종 참가자 구분'); // X열: 확정 / 보류 / X
+  const iFinal  = col('최종 참가자 구분'); // 확정 / 보류 / X
+  const iMatch  = col('학교 매칭');       // A(서울) / B(경기/충청/전라) / C(강원/경상)
+  const iCat    = col('대분류');
+  const iSubcat = col('중분류');
 
   const tz = ss.getSpreadsheetTimeZone();
   const str = (row, i) => i >= 0 ? String(row[i] || '').trim() : '';
@@ -83,7 +86,10 @@ function doGet() {
       outcome: str(r, iOutput),
       tag: parseTag(str(r, iTag)).rank,
       tagSub: parseTag(str(r, iTag)).sub,
-      final: str(r, iFinal)
+      final: str(r, iFinal),
+      match: str(r, iMatch),
+      cat: str(r, iCat),
+      subcat: str(r, iSubcat)
     })).filter(r => r.org);
 
   const payload = {

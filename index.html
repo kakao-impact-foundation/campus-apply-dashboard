@@ -118,6 +118,35 @@
   .legend .uDot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; margin-left: 6px; }
   .legend .uDot:first-child { margin-left: 0; }
 
+  /* ── 페이지 탭 ── */
+  .pageTabs { display: flex; gap: 8px; margin: 20px 0 24px; }
+  .pTab {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    background: var(--card); border: none; border-radius: 999px;
+    padding: 11px 22px; font-size: 15px; font-weight: 800; color: var(--muted);
+    cursor: pointer; transition: background .2s, color .2s, transform .15s;
+  }
+  .pTab:hover { transform: translateY(-1px); }
+  .pTab.on { background: var(--ink); color: #fff; }
+
+  /* ── 학교별 매칭 페이지 ── */
+  .matchGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-items: start; }
+  .mCard .mHead { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .mCard .mHead h3 { font-family: 'KakaoBigSans', Pretendard, sans-serif; font-size: 18px; font-weight: 800; }
+  .mCard .mCount { font-size: 13px; color: var(--muted); font-weight: 800; }
+  .gDot { width: 10px; height: 10px; border-radius: 50%; background: var(--gc, var(--muted)); flex: 0 0 auto; }
+  .mUnis { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .mUnis span { font-size: 12px; font-weight: 700; color: var(--body); background: var(--white); border-radius: 999px; padding: 4px 10px; }
+  .mList { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .mList li { display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; color: var(--ink); cursor: pointer; animation: rise .35s ease both; }
+  .mList li .gDot { width: 7px; height: 7px; }
+  .mList li:hover .mName { color: var(--pink-text); }
+  .mName { flex: 1; min-width: 0; }
+  .fChip { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 2px 9px; background: var(--white); color: var(--muted); flex: 0 0 auto; }
+  .fChip.ok { background: var(--ink); color: #fff; }
+  .mCard .none { font-size: 14px; color: var(--muted); }
+  .mNote { grid-column: 1 / -1; font-size: 14px; color: var(--body); font-weight: 600; line-height: 1.7; }
+
   /* ── 지도 레이어 토글 · 최종 구분 필터 ── */
   .mapCtrl { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-bottom: 10px; }
   .mapCtrl .lbl { font-size: 12px; font-weight: 700; color: var(--muted); margin-right: 2px; }
@@ -492,6 +521,12 @@
     <div class="updated" id="updated">데이터 불러오는 중…</div>
   </header>
 
+  <nav class="pageTabs rise" style="animation-delay:.04s">
+    <button class="pTab on" data-page="home">신청 현황</button>
+    <button class="pTab" data-page="match">학교별 매칭</button>
+  </nav>
+
+  <div id="page-home">
   <section class="card hero rise" style="animation-delay:.06s">
     <div class="heroL">
       <div class="statLabel">목표 달성 현황</div>
@@ -542,6 +577,11 @@
       <div class="kwRow rise" id="kwRow" style="animation-delay:.26s"></div>
       <div class="orgList" id="orgList"></div>
     </div>
+  </div>
+  </div><!-- /page-home -->
+
+  <div id="page-match" style="display:none">
+    <div class="matchGrid" id="matchGrid"></div>
   </div>
 
   <footer>카카오임팩트 · 테크포임팩트 캠퍼스 — 내부 운영용 대시보드</footer>
@@ -687,6 +727,9 @@ function dedupeOrgs(rows){
       if (r.tag && !o.tag) o.tag = r.tag;
       if (r.tagSub && !o.tagSub) o.tagSub = r.tagSub;
       if (r.final && !o.final) o.final = r.final;
+      if (r.match && !o.match) o.match = r.match;
+      if (r.cat && !o.cat) o.cat = r.cat;
+      if (r.subcat && !o.subcat) o.subcat = r.subcat;
       r.regions.forEach(rg => { if (!o.regions.includes(rg)) o.regions.push(rg); });
       splitFields(r.fields).forEach(f => { if (!o.fieldsArr.includes(f)) o.fieldsArr.push(f); });
     }
@@ -1084,6 +1127,60 @@ function renderFinalListFilter(){
     }));
 }
 
+/* ── 학교별 매칭 페이지 (Z열 '학교 매칭' 기준, 시트 자동 연동) ── */
+function renderMatchPage(){
+  const grid = document.getElementById('matchGrid');
+  if (!grid) return;
+  if (!ORGS.some(o => o.match)) {
+    grid.innerHTML = `<div class="card mNote">🏫 학교 매칭(Z열) 데이터가 아직 안 내려왔어요.<br/>
+      시트 → 확장 프로그램 → Apps Script에서 최신 코드로 새 버전 배포하면 자동으로 나타나요.</div>`;
+    return;
+  }
+  const byGroup = { A: [], B: [], C: [] };
+  const labels = { A: 'A(서울)', B: 'B(경기/충청/전라)', C: 'C(강원/경상)' };
+  ORGS.forEach(o => {
+    const m = String(o.match || '').trim();
+    const g = m.charAt(0).toUpperCase();
+    if (byGroup[g]) { byGroup[g].push(o); labels[g] = m; }
+  });
+  const unassigned = ORGS.filter(o => /확정|보류/.test(o.final || '') && !String(o.match || '').trim());
+
+  const orgLi = (o, dot) => `
+    <li data-key="${esc(o.key)}">
+      <span class="gDot"${dot ? ` style="background:${dot}"` : ''}></span>
+      <span class="mName">${esc(o.org)}</span>
+      ${o.cat && o.cat !== '-' ? `<span class="fChip">${esc(o.cat)}</span>` : ''}
+      ${o.final ? `<span class="fChip ${o.final.includes('확정') ? 'ok' : ''}">${esc(o.final)}</span>` : ''}
+    </li>`;
+
+  grid.innerHTML = Object.entries(byGroup).map(([g, orgs]) => `
+    <section class="card mCard rise" style="--gc:${UNI_GROUPS[g].color}">
+      <div class="mHead"><span class="gDot"></span><h3>${esc(labels[g])}</h3><span class="mCount">${orgs.length}팀</span></div>
+      <div class="mUnis">${UNIVERSITIES.filter(u => u.group === g).map(u => `<span>🏫 ${esc(u.name)}</span>`).join('')}</div>
+      ${orgs.length
+        ? `<ul class="mList">${orgs.map((o, i) => orgLi(o)).join('')}</ul>`
+        : '<div class="none">아직 매칭된 조직이 없어요.</div>'}
+    </section>`).join('')
+    + (unassigned.length ? `
+    <section class="card mCard rise">
+      <div class="mHead"><span class="gDot"></span><h3>미배정</h3><span class="mCount">${unassigned.length}팀</span></div>
+      <div class="mUnis"><span>확정·보류인데 아직 학교 매칭이 비어 있는 조직</span></div>
+      <ul class="mList">${unassigned.map(o => orgLi(o)).join('')}</ul>
+    </section>` : '');
+  grid.querySelectorAll('li[data-key]').forEach(li =>
+    li.addEventListener('click', () => openOrg(li.dataset.key)));
+}
+
+/* ── 페이지 탭 전환 ── */
+function switchPage(p){
+  document.getElementById('page-home').style.display = p === 'home' ? '' : 'none';
+  document.getElementById('page-match').style.display = p === 'match' ? '' : 'none';
+  document.querySelectorAll('.pTab').forEach(b => b.classList.toggle('on', b.dataset.page === p));
+  if (p === 'match') renderMatchPage();
+}
+document.querySelectorAll('.pTab').forEach(b =>
+  b.addEventListener('click', () => switchPage(b.dataset.page)));
+
 /* ── 조직 리스트 ── */
 function renderOrgList(){
   const list = document.getElementById('orgList');
@@ -1240,6 +1337,7 @@ function render(data){
   renderFinalListFilter();
   renderTagFilter();
   renderOrgList();
+  renderMatchPage();
 }
 
 document.getElementById('resetBtn').addEventListener('click', () => {
