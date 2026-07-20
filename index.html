@@ -128,6 +128,7 @@
     animation: pop .45s cubic-bezier(.3,1.4,.4,1) backwards;
   }
   .uniPin text { pointer-events: none; }
+  .uniHull { pointer-events: none; }
 
   .natPill {
     display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
@@ -535,6 +536,7 @@
         <span class="count" id="listCount"></span>
         <button class="reset" id="resetBtn">필터 초기화</button>
       </div>
+      <div class="kwRow rise" id="finalListRow" style="animation-delay:.20s"></div>
       <div class="kwRow rise" id="tagRow" style="animation-delay:.22s"></div>
       <div class="kwRow rise" id="tagSubRow" style="animation-delay:.24s;display:none"></div>
       <div class="kwRow rise" id="kwRow" style="animation-delay:.26s"></div>
@@ -622,9 +624,43 @@ const UNIVERSITIES = [
 /* 위경도 → 지도 SVG 좌표 (제주·서울·호미곶·고성 기준점으로 보정한 등장방형 변환) */
 const lngToX = lng => 326 + (lng - 126.55) * 86.4;
 const latToY = lat => 685 - (lat - 33.37) * 105.9;
+
+/* 같은 그룹 캠퍼스들을 감싸는 부드러운 영역(캡슐형):
+   각 핀 둘레에 반경 pad 원을 촘촘히 샘플링 → 전체 볼록 껍질 → 곡선으로 연결.
+   모든 핀이 항상 여백을 갖고 영역 안에 들어와요 (일직선 배치도 캡슐로 보임) */
+function hullPath(pts, pad){
+  const cloud = [];
+  pts.forEach(([x, y]) => {
+    for (let a = 0; a < 16; a++) {
+      const t = a / 16 * 2 * Math.PI;
+      cloud.push([x + pad * Math.cos(t), y + pad * Math.sin(t)]);
+    }
+  });
+  const sorted = cloud.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0]);
+  const lower = [], upper = [];
+  for (const p of sorted) {
+    while (lower.length >= 2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  for (const p of [...sorted].reverse()) {
+    while (upper.length >= 2 && cross(upper[upper.length-2], upper[upper.length-1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  const hull = lower.slice(0, -1).concat(upper.slice(0, -1));
+  const mid = (a, b) => [(a[0]+b[0])/2, (a[1]+b[1])/2];
+  const m0 = mid(hull[hull.length-1], hull[0]);
+  let d = `M${m0[0].toFixed(1)},${m0[1].toFixed(1)}`;
+  for (let i = 0; i < hull.length; i++) {
+    const p = hull[i], m = mid(p, hull[(i+1) % hull.length]);
+    d += ` Q${p[0].toFixed(1)},${p[1].toFixed(1)} ${m[0].toFixed(1)},${m[1].toFixed(1)}`;
+  }
+  return d + ' Z';
+}
 let selected = null;    // 선택된 권역
 let keyword = null;     // 선택된 활동 분야
 let tagFilter = null;   // 선택된 순위 (1순위, 2순위 ...)
+let finalListFilter = null; // 조직 리스트의 최종 구분 필터: null=전체 | 'pick'=확정·보류 | '확정' | '보류'
 let tagSubFilter = null; // 선택된 하위 카테고리 (기참여, 브라이언 펠로우 ...)
 
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -762,9 +798,16 @@ function renderMap(){
     }
   });
 
-  /* 🏫 대학 레이어: 캠퍼스 위치 핀 */
+  /* 🏫 대학 레이어: 같은 그룹 캠퍼스들을 색 영역으로 묶고, 핀은 캠퍼스 위치에 */
   let unis = '';
   if (showUniv) {
+    Object.keys(UNI_GROUPS).forEach(g => {
+      const pts = UNIVERSITIES.filter(u => u.group === g).map(u => [lngToX(u.lng), latToY(u.lat)]);
+      unis += `<path class="uniHull" d="${hullPath(pts, 10)}"
+                 fill="${UNI_GROUPS[g].color}" fill-opacity=".14"
+                 stroke="${UNI_GROUPS[g].color}" stroke-opacity=".5" stroke-width="1.1"
+                 stroke-dasharray="4 3" stroke-linejoin="round"/>`;
+    });
     UNIVERSITIES.forEach((u, j) => {
       const x = lngToX(u.lng), y = latToY(u.lat);
       const c = UNI_GROUPS[u.group].color;
@@ -1013,6 +1056,27 @@ function saveRating(key, who, score){
     });
 }
 
+/* ── 최종 구분(확정/보류) 리스트 필터 ── */
+function matchesFinalVal(o, v){
+  return v === 'pick' ? /확정|보류/.test(o.final || '') : String(o.final || '').includes(v);
+}
+function renderFinalListFilter(){
+  const row = document.getElementById('finalListRow');
+  if (!hasFinalData()) { row.innerHTML = ''; return; }
+  const opts = [['pick','✅ 확정·보류'], ['확정','확정'], ['보류','보류']];
+  row.innerHTML =
+    `<button class="kw ${!finalListFilter ? 'on' : ''}" data-fl="">전체<span class="n">${ORGS.length}</span></button>` +
+    opts.map(([v, label]) =>
+      `<button class="kw ${finalListFilter === v ? 'on' : ''}" data-fl="${v}">${label}<span class="n">${ORGS.filter(o => matchesFinalVal(o, v)).length}</span></button>`
+    ).join('');
+  row.querySelectorAll('[data-fl]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      finalListFilter = btn.dataset.fl || null;
+      renderFinalListFilter();
+      renderOrgList();
+    }));
+}
+
 /* ── 조직 리스트 ── */
 function renderOrgList(){
   const list = document.getElementById('orgList');
@@ -1024,8 +1088,10 @@ function renderOrgList(){
   if (keyword)   orgs = orgs.filter(o => o.fieldsArr.includes(keyword));
   if (tagFilter) orgs = orgs.filter(o => (o.tag || '4순위') === tagFilter);
   if (tagSubFilter) orgs = orgs.filter(o => (o.tagSub || '공개모집') === tagSubFilter);
+  if (finalListFilter) orgs = orgs.filter(o => matchesFinalVal(o, finalListFilter));
 
-  const filters = [selected, keyword, tagSubFilter || tagFilter].filter(Boolean);
+  const filters = [selected, keyword, tagSubFilter || tagFilter,
+                   finalListFilter && (finalListFilter === 'pick' ? '확정·보류' : finalListFilter)].filter(Boolean);
   reset.classList.toggle('on', filters.length > 0);
   countEl.textContent = (filters.length ? filters.join(' · ') + ' ' : '') + orgs.length + '팀';
 
@@ -1164,6 +1230,7 @@ function render(data){
   renderNatPill();
   renderDetail();
   renderKeywords();
+  renderFinalListFilter();
   renderTagFilter();
   renderOrgList();
 }
@@ -1173,9 +1240,11 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   keyword = null;
   tagFilter = null;
   tagSubFilter = null;
+  finalListFilter = null;
   applySelection();
   renderDetail();
   renderKeywords();
+  renderFinalListFilter();
   renderTagFilter();
   renderOrgList();
 });
