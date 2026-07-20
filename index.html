@@ -358,7 +358,6 @@
     margin-left: 4px; min-width: 34px; font-variant-numeric: tabular-nums;
   }
   .rateHint { margin-top: 8px; font-size: 12px; color: var(--muted); }
-  .rateBox.saving { opacity: .6; pointer-events: none; }
 
   .mGrid {
     display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px;
@@ -518,8 +517,9 @@
         <span class="count" id="listCount"></span>
         <button class="reset" id="resetBtn">필터 초기화</button>
       </div>
-      <div class="kwRow rise" id="tagRow" style="animation-delay:.22s"></div>
-      <div class="kwRow rise" id="kwRow" style="animation-delay:.26s"></div>
+      <div class="kwRow rise" id="rankRow" style="animation-delay:.20s"></div>
+      <div class="kwRow rise" id="tagRow" style="animation-delay:.24s"></div>
+      <div class="kwRow rise" id="kwRow" style="animation-delay:.28s"></div>
       <div class="orgList" id="orgList"></div>
     </div>
   </div>
@@ -566,6 +566,7 @@ let BY_REGION = {};     // 권역별 조직 목록
 let NAT_ORGS = [];      // 전국 활동 조직
 let selected = null;    // 선택된 권역
 let keyword = null;     // 선택된 활동 분야
+let rankFilter = null;  // 선택된 순위 그룹 (1순위~4순위)
 let tagFilter = null;   // 선택된 유입 경로
 
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -754,12 +755,35 @@ function tagParts(full){
   const m = String(full).match(/^(\d순위)\s*-?\s*(.*)$/);
   return m ? { rank: m[1], detail: m[2].trim() } : { rank: '', detail: String(full) };
 }
-function renderTagFilter(){
+/* 순위 그룹(1~4순위) 필터 */
+function renderRankFilter(){
+  const ranks = ['1순위', '2순위', '3순위', '4순위'];
   const counts = {};
-  ORGS.forEach(o => { const t = tagFullOf(o); counts[t] = (counts[t] || 0) + 1; });
+  ranks.forEach(r => counts[r] = 0);
+  ORGS.forEach(o => counts[o.tag || '4순위'] = (counts[o.tag || '4순위'] || 0) + 1);
+  document.getElementById('rankRow').innerHTML =
+    `<button class="kw ${!rankFilter ? 'on' : ''}" data-rank="">전체<span class="n">${ORGS.length}</span></button>` +
+    ranks.map(r =>
+      `<button class="kw ${rankFilter === r ? 'on' : ''}" data-rank="${esc(r)}">${TAG_EMOJI[r] ? TAG_EMOJI[r] + ' ' : ''}${esc(r)}<span class="n">${counts[r]}</span></button>`
+    ).join('');
+  document.querySelectorAll('#rankRow .kw').forEach(btn =>
+    btn.addEventListener('click', () => {
+      rankFilter = btn.dataset.rank || null;
+      /* 선택한 순위와 안 맞는 세부 구분 필터는 해제 */
+      if (tagFilter && rankFilter && tagParts(tagFilter).rank !== rankFilter) tagFilter = null;
+      renderRankFilter();
+      renderTagFilter();
+      renderOrgList();
+    }));
+}
+
+function renderTagFilter(){
+  const pool = rankFilter ? ORGS.filter(o => (o.tag || '4순위') === rankFilter) : ORGS;
+  const counts = {};
+  pool.forEach(o => { const t = tagFullOf(o); counts[t] = (counts[t] || 0) + 1; });
   const tags = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'ko'));
   document.getElementById('tagRow').innerHTML =
-    `<button class="kw ${!tagFilter ? 'on' : ''}" data-tag="">전체<span class="n">${ORGS.length}</span></button>` +
+    `<button class="kw ${!tagFilter ? 'on' : ''}" data-tag="">전체<span class="n">${pool.length}</span></button>` +
     tags.map(t => {
       const p = tagParts(t);
       const emoji = TAG_EMOJI[p.rank] || '';
@@ -816,33 +840,37 @@ function renderRateBox(key){
     }));
 }
 
-async function saveRating(key, who, score){
-  const box = document.getElementById('rateBox');
-  const prev = { ...(RATINGS[key] || {}) };
-  /* 화면 먼저 반영(optimistic), 실패하면 되돌리기 */
-  RATINGS[key] = { ...prev };
+/* 저장은 백그라운드로 — 화면은 즉시 반영, 같은 사람·조직 요청은 순서 보장 */
+const saveChain = {};
+function saveRating(key, who, score){
+  const prevScore = (RATINGS[key] || {})[who] || 0;
+  RATINGS[key] = { ...(RATINGS[key] || {}) };
   if (score === 0) delete RATINGS[key][who];
   else RATINGS[key][who] = score;
   renderRateBox(key);
   renderOrgList();
-  if (box) box.classList.add('saving');
-  try {
-    const res = await fetch(DATA_URL, {
+
+  const qk = key + '|' + who;
+  saveChain[qk] = (saveChain[qk] || Promise.resolve())
+    .then(() => fetch(DATA_URL, {
       method: 'POST',
       body: JSON.stringify({ orgKey: key, rater: who, score })
+    }))
+    .then(res => res.json())
+    .then(out => { if (!out.ok) throw new Error(out.error || 'save failed'); })
+    .catch(err => {
+      console.warn('평가 저장 실패', err);
+      /* 그 사이 다른 값을 또 눌렀으면 그대로 두고, 아니면 되돌리기 */
+      const cur = (RATINGS[key] || {})[who] || 0;
+      if (cur === score) {
+        RATINGS[key] = { ...(RATINGS[key] || {}) };
+        if (prevScore === 0) delete RATINGS[key][who];
+        else RATINGS[key][who] = prevScore;
+        renderRateBox(key);
+        renderOrgList();
+      }
+      alert(`${who}님의 평가 저장에 실패했어요. 별점을 다시 눌러 주세요.`);
     });
-    const out = await res.json();
-    if (!out.ok) throw new Error(out.error || 'save failed');
-    RATINGS[key] = out.ratings || {};
-  } catch (err) {
-    console.warn('평가 저장 실패', err);
-    RATINGS[key] = prev;
-    alert('평가 저장에 실패했어요. 잠시 후 다시 시도해 주세요.');
-  }
-  const live = document.getElementById('rateBox');
-  if (live) live.classList.remove('saving');
-  renderRateBox(key);
-  renderOrgList();
 }
 
 /* ── 조직 리스트 ── */
@@ -854,9 +882,10 @@ function renderOrgList(){
   let orgs = [...ORGS].sort((a,b) => b.ts.localeCompare(a.ts));
   if (selected)  orgs = orgs.filter(o => o.regions.includes(selected) || o.regions.includes(NATIONWIDE));
   if (keyword)   orgs = orgs.filter(o => o.fieldsArr.includes(keyword));
-  if (tagFilter) orgs = orgs.filter(o => tagFullOf(o) === tagFilter);
+  if (rankFilter) orgs = orgs.filter(o => (o.tag || '4순위') === rankFilter);
+  if (tagFilter)  orgs = orgs.filter(o => tagFullOf(o) === tagFilter);
 
-  const filters = [selected, keyword, tagFilter && tagParts(tagFilter).detail].filter(Boolean);
+  const filters = [selected, keyword, rankFilter, tagFilter && tagParts(tagFilter).detail].filter(Boolean);
   reset.classList.toggle('on', filters.length > 0);
   countEl.textContent = (filters.length ? filters.join(' · ') + ' ' : '') + orgs.length + '팀';
 
@@ -1009,6 +1038,7 @@ function render(data){
   renderMap();
   renderDetail();
   renderKeywords();
+  renderRankFilter();
   renderTagFilter();
   renderOrgList();
 }
@@ -1016,10 +1046,12 @@ function render(data){
 document.getElementById('resetBtn').addEventListener('click', () => {
   selected = null;
   keyword = null;
+  rankFilter = null;
   tagFilter = null;
   applySelection();
   renderDetail();
   renderKeywords();
+  renderRankFilter();
   renderTagFilter();
   renderOrgList();
 });
