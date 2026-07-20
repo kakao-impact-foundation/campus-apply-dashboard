@@ -15,6 +15,8 @@
  */
 
 const SHEET_GID = 229370971; // 응답 탭의 gid
+const RATING_SHEET = '운영진평가'; // 평점 저장 탭 (없으면 자동 생성)
+const RATERS = ['헤이븐', '조안', '준'];
 
 // GitHub Pages 공개 배포용이라 연락처(전화·이메일)는 내보내지 않아요.
 // 연락처가 필요하면 시트에서 직접 확인하세요.
@@ -82,10 +84,77 @@ function doGet() {
 
   const payload = {
     updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'),
-    rows: rows
+    rows: rows,
+    ratings: readRatings(ss)
   };
 
   return ContentService
     .createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ── 운영진 평가 (헤이븐·조안·준) ─────────────────────────
+ * 대시보드에서 별점을 누르면 doPost로 들어와
+ * '운영진평가' 탭에 (조직키, 평가자, 점수) 한 줄씩 저장돼요.
+ * 같은 조직·같은 평가자는 덮어쓰기, 점수 0은 평가 취소(삭제).
+ */
+
+function readRatings(ss) {
+  const sh = ss.getSheetByName(RATING_SHEET);
+  const out = {};
+  if (!sh || sh.getLastRow() < 2) return out;
+  sh.getDataRange().getValues().slice(1).forEach(r => {
+    const key = String(r[1] || '').trim();
+    const rater = String(r[2] || '').trim();
+    const score = Number(r[3]);
+    if (!key || !rater || !(score >= 1 && score <= 5)) return;
+    (out[key] = out[key] || {})[rater] = score;
+  });
+  return out;
+}
+
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const body = JSON.parse(e.postData.contents);
+    const key = String(body.orgKey || '').trim().slice(0, 200);
+    const rater = String(body.rater || '').trim();
+    const score = Number(body.score);
+    if (!key || RATERS.indexOf(rater) === -1 || !(score >= 0 && score <= 5)) {
+      return jsonOut({ ok: false, error: 'invalid' });
+    }
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sh = ss.getSheetByName(RATING_SHEET);
+    if (!sh) {
+      sh = ss.insertSheet(RATING_SHEET);
+      sh.appendRow(['수정시각', '조직키', '평가자', '점수']);
+    }
+    const data = sh.getDataRange().getValues();
+    let rowIdx = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][1]).trim() === key && String(data[i][2]).trim() === rater) {
+        rowIdx = i + 1;
+        break;
+      }
+    }
+    if (score === 0) {
+      if (rowIdx > 0) sh.deleteRow(rowIdx);
+    } else if (rowIdx > 0) {
+      sh.getRange(rowIdx, 1, 1, 4).setValues([[new Date(), key, rater, score]]);
+    } else {
+      sh.appendRow([new Date(), key, rater, score]);
+    }
+    return jsonOut({ ok: true, ratings: readRatings(ss)[key] || {} });
+  } catch (err) {
+    return jsonOut({ ok: false, error: String(err) });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function jsonOut(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
