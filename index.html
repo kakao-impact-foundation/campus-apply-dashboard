@@ -1141,7 +1141,10 @@ function renderMatchPage(){
   ORGS.forEach(o => {
     const m = String(o.match || '').trim();
     const g = m.charAt(0).toUpperCase();
-    if (byGroup[g]) { byGroup[g].push(o); labels[g] = m; }
+    if (!byGroup[g]) return;
+    labels[g] = m;
+    /* 최종 구분이 확정·보류인 조직만 (X·빈값은 매칭이 남아 있어도 제외) */
+    if (/확정|보류/.test(o.final || '')) byGroup[g].push(o);
   });
   const unassigned = ORGS.filter(o => /확정|보류/.test(o.final || '') && !String(o.match || '').trim());
 
@@ -1153,14 +1156,18 @@ function renderMatchPage(){
       ${o.final ? `<span class="fChip ${o.final.includes('확정') ? 'ok' : ''}">${esc(o.final)}</span>` : ''}
     </li>`;
 
-  grid.innerHTML = Object.entries(byGroup).map(([g, orgs]) => `
+  grid.innerHTML = Object.entries(byGroup).map(([g, orgs]) => {
+    const nOk = orgs.filter(o => (o.final || '').includes('확정')).length;
+    const nHold = orgs.length - nOk;
+    return `
     <section class="card mCard rise" style="--gc:${UNI_GROUPS[g].color}">
-      <div class="mHead"><span class="gDot"></span><h3>${esc(labels[g])}</h3><span class="mCount">${orgs.length}팀</span></div>
+      <div class="mHead"><span class="gDot"></span><h3>${esc(labels[g])}</h3><span class="mCount">확정 ${nOk}팀${nHold ? ` · 보류 ${nHold}` : ''}</span></div>
       <div class="mUnis">${UNIVERSITIES.filter(u => u.group === g).map(u => `<span>🏫 ${esc(u.name)}</span>`).join('')}</div>
       ${orgs.length
         ? `<ul class="mList">${orgs.map((o, i) => orgLi(o)).join('')}</ul>`
         : '<div class="none">아직 매칭된 조직이 없어요.</div>'}
-    </section>`).join('')
+    </section>`;
+  }).join('')
     + (unassigned.length ? `
     <section class="card mCard rise">
       <div class="mHead"><span class="gDot"></span><h3>미배정</h3><span class="mCount">${unassigned.length}팀</span></div>
