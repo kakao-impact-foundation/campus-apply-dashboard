@@ -637,7 +637,7 @@
       <div class="cmpC full">
         <h3>6대 테마 비교 <span>1인 1테마, 핵심 활동 기준</span></h3>
         <div><canvas id="cmpCT"></canvas></div>
-        <div class="cmpI"><strong>접근성</strong> 33%→20%(↓10%p) 축소 · <strong>기후/환경·포용성</strong> 상승 · 나머지 4개 테마 16% 내외로 <strong>고르게 밸런싱</strong></div>
+        <div class="cmpI"><strong>접근성</strong> 33%→20%(↓) 축소 · <strong>기후/환경·사회적포용</strong> 상승 · 나머지 4개 테마 16% 내외로 <strong>고르게 밸런싱</strong></div>
       </div>
       <div class="cmpC">
         <h3>2. 참가자 구분</h3>
@@ -1526,8 +1526,8 @@ function initCmpCharts(){
     data:{labels:['교육','아동/청소년','돌봄/복지','환경/기후','지역/도시','건강/의료','문화/예술','노동/일자리','장애/접근성','노인','이주민/다문화','인권/젠더'],
     datasets:d([48,22,33,22,21,21,19,19,18,15,11,10],[48,28,24,24,20,12,24,8,16,4,16,20])},options:gO('%')});
   new Chart(document.getElementById('cmpCT'),{type:'bar',
-    data:{labels:['접근성\n(시니어/장애)','기후/환경','지역소멸','마음건강\n/돌봄','포용성\n(이주민/젠더)','교육/제도'],
-    datasets:d([33,16,18,14,11,7],[20,20,16,16,16,8])},
+    data:{labels:['기후/환경','마음건강/돌봄','접근성','사회적포용','교육/제도','지역소멸'],
+    datasets:d([16,14,33,11,7,18],[20,16,20,16,8,16])},
     options:{...gO('%'),indexAxis:'x',scales:{
       y:{grid:{color:hr,drawBorder:false},ticks:{color:mt,callback:v=>v+'%'},border:{display:false},max:40},
       x:{grid:{display:false},ticks:{color:ik,font:{weight:600,size:11}},border:{display:false}}}}});
