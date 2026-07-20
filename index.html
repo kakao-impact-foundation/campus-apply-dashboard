@@ -172,6 +172,8 @@
   .kw .n { color: var(--muted); font-weight: 700; margin-left: 3px; }
   .kw.on { background: var(--ink); color: #fff; }
   .kw.on .n { color: #fff; opacity: .7; }
+  .kw.sub { font-size: 12px; padding: 6px 12px; background: var(--bg); }
+  .kw.sub.on { background: var(--muted); color: #fff; }
 
   /* ── stats ──────────────────────────── */
   .statLabel { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
@@ -517,9 +519,9 @@
         <span class="count" id="listCount"></span>
         <button class="reset" id="resetBtn">필터 초기화</button>
       </div>
-      <div class="kwRow rise" id="tagRow" style="animation-delay:.20s"></div>
-      <div class="kwRow rise" id="kwRow" style="animation-delay:.24s"></div>
-      <div class="kwRow rise" id="rankRow" style="animation-delay:.28s"></div>
+      <div class="kwRow rise" id="tagRow" style="animation-delay:.22s"></div>
+      <div class="kwRow rise" id="tagSubRow" style="animation-delay:.24s;display:none"></div>
+      <div class="kwRow rise" id="kwRow" style="animation-delay:.26s"></div>
       <div class="orgList" id="orgList"></div>
     </div>
   </div>
@@ -566,8 +568,8 @@ let BY_REGION = {};     // 권역별 조직 목록
 let NAT_ORGS = [];      // 전국 활동 조직
 let selected = null;    // 선택된 권역
 let keyword = null;     // 선택된 활동 분야
-let rankFilter = null;  // 선택된 순위 그룹 (1순위~4순위)
-let tagFilter = null;   // 선택된 유입 경로
+let tagFilter = null;   // 선택된 순위 (1순위, 2순위 ...)
+let tagSubFilter = null; // 선택된 하위 카테고리 (기참여, 브라이언 펠로우 ...)
 
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -591,7 +593,7 @@ function dedupeOrgs(rows){
       o.people.push(r.name);
       o.rows.push(r);
       if (r.tag && !o.tag) o.tag = r.tag;
-      if (r.tagFull && !o.tagFull) o.tagFull = r.tagFull;
+      if (r.tagSub && !o.tagSub) o.tagSub = r.tagSub;
       r.regions.forEach(rg => { if (!o.regions.includes(rg)) o.regions.push(rg); });
       splitFields(r.fields).forEach(f => { if (!o.fieldsArr.includes(f)) o.fieldsArr.push(f); });
     }
@@ -744,54 +746,52 @@ function renderKeywords(){
     }));
 }
 
-/* ── 유입 경로(참가자 구분) 필터 — 시트 U열 값 그대로 ── */
+/* ── 참가자 구분 필터 (2단: 순위 → 하위 카테고리) ── */
+const TAG_ORDER = ['1순위', '2순위', '3순위', '4순위'];
 const TAG_EMOJI = {'1순위': '🟡', '2순위': '🟢', '3순위': '🔵', '4순위': ''};
-/* 조직의 참가자 구분: U열 원본("1순위 - 기참여") 우선, 구버전 API면 순위만 */
-function tagFullOf(o){
-  return o.tagFull || ((o.tag && o.tag !== '4순위') ? o.tag : '4순위 - 공개모집');
-}
-/* "1순위 - 기참여" → {rank:"1순위", detail:"기참여"} */
-function tagParts(full){
-  const m = String(full).match(/^(\d순위)\s*-?\s*(.*)$/);
-  return m ? { rank: m[1], detail: m[2].trim() } : { rank: '', detail: String(full) };
-}
-/* 순위 그룹(1~4순위) 필터 */
-function renderRankFilter(){
-  const ranks = ['1순위', '2순위', '3순위', '4순위'];
-  const counts = {};
-  ranks.forEach(r => counts[r] = 0);
-  ORGS.forEach(o => counts[o.tag || '4순위'] = (counts[o.tag || '4순위'] || 0) + 1);
-  document.getElementById('rankRow').innerHTML =
-    `<button class="kw ${!rankFilter ? 'on' : ''}" data-rank="">전체<span class="n">${ORGS.length}</span></button>` +
-    ranks.map(r =>
-      `<button class="kw ${rankFilter === r ? 'on' : ''}" data-rank="${esc(r)}">${TAG_EMOJI[r] ? TAG_EMOJI[r] + ' ' : ''}${esc(r)}<span class="n">${counts[r]}</span></button>`
-    ).join('');
-  document.querySelectorAll('#rankRow .kw').forEach(btn =>
-    btn.addEventListener('click', () => {
-      rankFilter = btn.dataset.rank || null;
-      /* 선택한 순위와 안 맞는 세부 구분 필터는 해제 */
-      if (tagFilter && rankFilter && tagParts(tagFilter).rank !== rankFilter) tagFilter = null;
-      renderRankFilter();
-      renderTagFilter();
-      renderOrgList();
-    }));
-}
-
 function renderTagFilter(){
-  const pool = rankFilter ? ORGS.filter(o => (o.tag || '4순위') === rankFilter) : ORGS;
-  const counts = {};
-  pool.forEach(o => { const t = tagFullOf(o); counts[t] = (counts[t] || 0) + 1; });
-  const tags = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'ko'));
-  document.getElementById('tagRow').innerHTML =
-    `<button class="kw ${!tagFilter ? 'on' : ''}" data-tag="">전체<span class="n">${pool.length}</span></button>` +
-    tags.map(t => {
-      const p = tagParts(t);
-      const emoji = TAG_EMOJI[p.rank] || '';
-      return `<button class="kw ${tagFilter === t ? 'on' : ''}" data-tag="${esc(t)}">${emoji ? emoji + ' ' : ''}${esc(p.detail || p.rank)}<span class="n">${counts[t]}</span></button>`;
-    }).join('');
+  const rankCounts = {};
+  const subCounts = {};
+  TAG_ORDER.forEach(t => { rankCounts[t] = 0; subCounts[t] = {}; });
+  ORGS.forEach(o => {
+    const rank = o.tag || '4순위';
+    const sub = o.tagSub || '공개모집';
+    rankCounts[rank] = (rankCounts[rank] || 0) + 1;
+    if (!subCounts[rank]) subCounts[rank] = {};
+    subCounts[rank][sub] = (subCounts[rank][sub] || 0) + 1;
+  });
+
+  // 순위 버튼 행
+  let html = `<button class="kw ${!tagFilter ? 'on' : ''}" data-tag="">전체<span class="n">${ORGS.length}</span></button>` +
+    TAG_ORDER.map(t =>
+      `<button class="kw ${tagFilter === t ? 'on' : ''}" data-tag="${esc(t)}">${TAG_EMOJI[t] ? TAG_EMOJI[t] + ' ' : ''}${esc(t)}<span class="n">${rankCounts[t]}</span></button>`
+    ).join('');
+  document.getElementById('tagRow').innerHTML = html;
+
+  // 하위 카테고리 행 (순위 선택 시에만 표시, 하위가 2개 이상일 때만)
+  const subRow = document.getElementById('tagSubRow');
+  if (tagFilter && subCounts[tagFilter] && Object.keys(subCounts[tagFilter]).length > 1) {
+    const subs = Object.entries(subCounts[tagFilter]).sort((a,b) => b[1] - a[1]);
+    subRow.innerHTML = `<button class="kw sub ${!tagSubFilter ? 'on' : ''}" data-sub="">전체<span class="n">${rankCounts[tagFilter]}</span></button>` +
+      subs.map(([s, c]) =>
+        `<button class="kw sub ${tagSubFilter === s ? 'on' : ''}" data-sub="${esc(s)}">${esc(s)}<span class="n">${c}</span></button>`
+      ).join('');
+    subRow.style.display = '';
+    subRow.querySelectorAll('.kw').forEach(btn =>
+      btn.addEventListener('click', () => {
+        tagSubFilter = btn.dataset.sub || null;
+        renderTagFilter();
+        renderOrgList();
+      }));
+  } else {
+    subRow.innerHTML = '';
+    subRow.style.display = 'none';
+  }
+
   document.querySelectorAll('#tagRow .kw').forEach(btn =>
     btn.addEventListener('click', () => {
       tagFilter = btn.dataset.tag || null;
+      tagSubFilter = null;
       renderTagFilter();
       renderOrgList();
     }));
@@ -882,10 +882,10 @@ function renderOrgList(){
   let orgs = [...ORGS].sort((a,b) => b.ts.localeCompare(a.ts));
   if (selected)  orgs = orgs.filter(o => o.regions.includes(selected) || o.regions.includes(NATIONWIDE));
   if (keyword)   orgs = orgs.filter(o => o.fieldsArr.includes(keyword));
-  if (rankFilter) orgs = orgs.filter(o => (o.tag || '4순위') === rankFilter);
-  if (tagFilter)  orgs = orgs.filter(o => tagFullOf(o) === tagFilter);
+  if (tagFilter) orgs = orgs.filter(o => (o.tag || '4순위') === tagFilter);
+  if (tagSubFilter) orgs = orgs.filter(o => (o.tagSub || '공개모집') === tagSubFilter);
 
-  const filters = [selected, keyword, rankFilter, tagFilter && tagParts(tagFilter).detail].filter(Boolean);
+  const filters = [selected, keyword, tagSubFilter || tagFilter].filter(Boolean);
   reset.classList.toggle('on', filters.length > 0);
   countEl.textContent = (filters.length ? filters.join(' · ') + ' ' : '') + orgs.length + '팀';
 
@@ -896,7 +896,7 @@ function renderOrgList(){
   list.innerHTML = orgs.map((o, i) => `
     <div class="org" style="animation-delay:${i * 0.06}s" data-key="${esc(o.key)}">
       <div class="over"><span>${esc(o.type.split('(')[0].replace(':','').trim())}</span><span>·</span><span>${esc(o.ts.slice(5,16))} 신청</span></div>
-      <div class="name">${esc(o.org)}${o.tag && o.tag !== '4순위' ? `<span class="srcTag ${o.tag === '1순위' ? 'tYel' : o.tag === '2순위' ? 'tGrn' : 'tBlu'}">${esc(tagParts(tagFullOf(o)).detail || o.tag)}</span>` : ''}</div>
+      <div class="name">${esc(o.org)}${o.tag && o.tag !== '4순위' ? `<span class="srcTag ${o.tag === '1순위' ? 'tYel' : o.tag === '2순위' ? 'tGrn' : 'tBlu'}">${esc(o.tagSub || o.tag)}</span>` : ''}</div>
       <div class="meta">
         <span class="dot"></span><span class="rg">${esc(o.regions.join(' · '))}</span>
         <span class="sep">|</span><span>${esc(o.people.join(', '))}</span>
@@ -964,7 +964,7 @@ function openOrg(key){
     <div class="mOver"><span>${esc(o.type.replace(/:\s*$/,''))}</span><span>·</span><span>${esc(o.ts.slice(0,16))} 첫 신청</span>${o.rows.length > 1 ? `<span>·</span><span>신청 ${o.rows.length}건</span>` : ''}</div>
     <div class="mName">${esc(o.org)}</div>
     <div class="mChips">
-      <span>${TAG_EMOJI[tagParts(tagFullOf(o)).rank] || '🏷️'} ${esc(tagFullOf(o))}</span>
+      <span>${TAG_EMOJI[o.tag] || '🏷️'} ${esc(o.tagSub ? o.tag + ' - ' + o.tagSub : o.tag || '4순위')}</span>
       ${o.regions.map(r => `<span>📍 ${esc(r)}</span>`).join('')}
       ${o.fieldsArr.map(f => `<span class="gray">${esc(f)}</span>`).join('')}
     </div>
@@ -1038,7 +1038,6 @@ function render(data){
   renderMap();
   renderDetail();
   renderKeywords();
-  renderRankFilter();
   renderTagFilter();
   renderOrgList();
 }
@@ -1046,12 +1045,11 @@ function render(data){
 document.getElementById('resetBtn').addEventListener('click', () => {
   selected = null;
   keyword = null;
-  rankFilter = null;
   tagFilter = null;
+  tagSubFilter = null;
   applySelection();
   renderDetail();
   renderKeywords();
-  renderRankFilter();
   renderTagFilter();
   renderOrgList();
 });

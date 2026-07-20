@@ -52,16 +52,12 @@ function doGet() {
   const tz = ss.getSpreadsheetTimeZone();
   const str = (row, i) => i >= 0 ? String(row[i] || '').trim() : '';
 
-  // U열 값에서 순위 그룹 추출: "1순위 - xxx" → "1순위", 빈 값 → "4순위"
+  // U열 값에서 순위와 하위 카테고리 분리: "1순위 - 기참여" → { rank: "1순위", sub: "기참여" }
   const parseTag = (val) => {
     const s = String(val || '').trim();
-    const m = s.match(/^(\d순위)/);
-    return m ? m[1] : '4순위';
-  };
-  // U열 원본 구분 값: "1순위 - 기참여" 등. 빈 값은 공개모집(기본 유입)으로
-  const parseTagFull = (val) => {
-    const s = String(val || '').trim();
-    return s || '4순위 - 공개모집';
+    const m = s.match(/^(\d순위)\s*-\s*(.+)/);
+    if (m) return { rank: m[1], sub: m[2].trim() };
+    return { rank: '4순위', sub: '공개모집' };
   };
 
   const rows = values.slice(1)
@@ -84,8 +80,8 @@ function doGet() {
       reason: str(r, iReason),
       questions: str(r, iQuest),
       outcome: str(r, iOutput),
-      tag: parseTag(str(r, iTag)),
-      tagFull: parseTagFull(str(r, iTag))
+      tag: parseTag(str(r, iTag)).rank,
+      tagSub: parseTag(str(r, iTag)).sub
     })).filter(r => r.org);
 
   const payload = {
