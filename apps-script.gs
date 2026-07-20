@@ -45,21 +45,16 @@ function doGet() {
   const iQuest  = col('질문');            // Q15
   const iOutput = col('결과물');          // Q16
 
-  // H열(index 7) 배경색으로 기참여 여부 판별
-  const dataRange = sheet.getRange(2, 8, values.length - 1, 1); // H열, 데이터 행만
-  const bgColors = dataRange.getBackgrounds().map(r => r[0]);
+  const iTag    = col('참가자 구분');    // U열
 
   const tz = ss.getSpreadsheetTimeZone();
   const str = (row, i) => i >= 0 ? String(row[i] || '').trim() : '';
 
-  // 노란색=기참여, 초록색=네트워크, 파란색=제안메일, 그 외(보라/없음 등)=공모
-  // 노란색=기참여, 초록색=네트워크, 파란색=제안메일, 그 외=공모
-  const colorTag = (hex) => {
-    const h = (hex || '').toLowerCase();
-    if (h === '#ffd966') return '기참여';
-    if (h === '#93c47d') return '네트워크';
-    if (h === '#6fa8dc') return '제안메일';
-    return '공모';
+  // U열 값에서 순위 그룹 추출: "1순위 - xxx" → "1순위", 빈 값 → "4순위"
+  const parseTag = (val) => {
+    const s = String(val || '').trim();
+    const m = s.match(/^(\d순위)/);
+    return m ? m[1] : '4순위';
   };
 
   const rows = values.slice(1)
@@ -82,7 +77,7 @@ function doGet() {
       reason: str(r, iReason),
       questions: str(r, iQuest),
       outcome: str(r, iOutput),
-      tag: colorTag(bgColors[i] || '')
+      tag: parseTag(str(r, iTag))
     })).filter(r => r.org);
 
   const payload = {

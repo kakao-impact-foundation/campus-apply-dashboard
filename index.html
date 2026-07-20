@@ -448,10 +448,10 @@
         <span class="chip">목표 <b>24</b>팀</span>
       </div>
       <div class="subStats">
-        <span class="chip">🟡 기참여 <b id="tagReturn">0</b></span>
-        <span class="chip">🟢 네트워크 <b id="tagNetwork">0</b></span>
-        <span class="chip">🔵 제안메일 <b id="tagProposal">0</b></span>
-        <span class="chip">공모 <b id="tagOpen">0</b></span>
+        <span class="chip">🟡 1순위 <b id="tag1">0</b></span>
+        <span class="chip">🟢 2순위 <b id="tag2">0</b></span>
+        <span class="chip">🔵 3순위 <b id="tag3">0</b></span>
+        <span class="chip">4순위 <b id="tag4">0</b></span>
       </div>
     </div>
   </section>
@@ -695,12 +695,12 @@ function renderKeywords(){
 }
 
 /* ── 유입 경로 필터 ── */
-const TAG_ORDER = ['기참여', '네트워크', '제안메일', '공모'];
-const TAG_EMOJI = {'기참여': '🟡', '네트워크': '🟢', '제안메일': '🔵', '공모': ''};
+const TAG_ORDER = ['1순위', '2순위', '3순위', '4순위'];
+const TAG_EMOJI = {'1순위': '🟡', '2순위': '🟢', '3순위': '🔵', '4순위': ''};
 function renderTagFilter(){
   const counts = {};
   TAG_ORDER.forEach(t => counts[t] = 0);
-  ORGS.forEach(o => counts[o.tag || '공모'] = (counts[o.tag || '공모'] || 0) + 1);
+  ORGS.forEach(o => counts[o.tag || '4순위'] = (counts[o.tag || '4순위'] || 0) + 1);
   document.getElementById('tagRow').innerHTML =
     `<button class="kw ${!tagFilter ? 'on' : ''}" data-tag="">전체<span class="n">${ORGS.length}</span></button>` +
     TAG_ORDER.map(t =>
@@ -723,7 +723,7 @@ function renderOrgList(){
   let orgs = [...ORGS].sort((a,b) => b.ts.localeCompare(a.ts));
   if (selected)  orgs = orgs.filter(o => o.regions.includes(selected) || o.regions.includes(NATIONWIDE));
   if (keyword)   orgs = orgs.filter(o => o.fieldsArr.includes(keyword));
-  if (tagFilter) orgs = orgs.filter(o => (o.tag || '공모') === tagFilter);
+  if (tagFilter) orgs = orgs.filter(o => (o.tag || '4순위') === tagFilter);
 
   const filters = [selected, keyword, tagFilter].filter(Boolean);
   reset.classList.toggle('on', filters.length > 0);
@@ -736,7 +736,7 @@ function renderOrgList(){
   list.innerHTML = orgs.map((o, i) => `
     <div class="org" style="animation-delay:${i * 0.06}s" data-key="${esc(o.key)}">
       <div class="over"><span>${esc(o.type.split('(')[0].replace(':','').trim())}</span><span>·</span><span>${esc(o.ts.slice(5,16))} 신청</span></div>
-      <div class="name">${esc(o.org)}${o.tag && o.tag !== '공모' ? `<span class="srcTag ${o.tag === '기참여' ? 'tYel' : o.tag === '네트워크' ? 'tGrn' : 'tBlu'}">${esc(o.tag)}</span>` : ''}</div>
+      <div class="name">${esc(o.org)}${o.tag && o.tag !== '4순위' ? `<span class="srcTag ${o.tag === '1순위' ? 'tYel' : o.tag === '2순위' ? 'tGrn' : 'tBlu'}">${esc(o.tag)}</span>` : ''}</div>
       <div class="meta">
         <span class="dot"></span><span class="rg">${esc(o.regions.join(' · '))}</span>
         <span class="sep">|</span><span>${esc(o.people.join(', '))}</span>
@@ -850,14 +850,14 @@ function render(data){
   countUp(document.getElementById('pct'), pct, '%');
   document.getElementById('appCount').textContent = rows.length;
   document.getElementById('orgCount').textContent = ORGS.length;
-  const nReturn = ORGS.filter(o => o.tag === '기참여').length;
-  const nNetwork = ORGS.filter(o => o.tag === '네트워크').length;
-  const nProposal = ORGS.filter(o => o.tag === '제안메일').length;
-  const nOpen = ORGS.length - nReturn - nNetwork - nProposal;
-  document.getElementById('tagReturn').textContent = nReturn;
-  document.getElementById('tagNetwork').textContent = nNetwork;
-  document.getElementById('tagProposal').textContent = nProposal;
-  document.getElementById('tagOpen').textContent = nOpen;
+  const n1 = ORGS.filter(o => o.tag === '1순위').length;
+  const n2 = ORGS.filter(o => o.tag === '2순위').length;
+  const n3 = ORGS.filter(o => o.tag === '3순위').length;
+  const n4 = ORGS.length - n1 - n2 - n3;
+  document.getElementById('tag1').textContent = n1;
+  document.getElementById('tag2').textContent = n2;
+  document.getElementById('tag3').textContent = n3;
+  document.getElementById('tag4').textContent = n4;
   document.getElementById('updated').textContent =
     `기준: ${data.updatedAt}` + (DATA_URL ? ' · 시트 자동 연동' : ' · 수동 저장본');
   requestAnimationFrame(() => {
