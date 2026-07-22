@@ -795,7 +795,7 @@ function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<
 
 /* 같은 조직 판별: 괄호 내용/사단법인/주식회사/공백 차이 무시 */
 function orgKey(name){
-  return String(name).replace(/\([^)]*\)|사단법인|주식회사|재단법인|\s/g, '');
+  return String(name).replace(/\([^)]*\)|사단법인|주식회사|재단법인|[*]|\s/g, '');
 }
 function splitFields(s){
   return String(s || '').split(',').map(x => x.trim().replace(/:$/,'')).filter(Boolean);
