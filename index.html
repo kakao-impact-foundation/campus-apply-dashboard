@@ -620,19 +620,19 @@
   <div id="page-compare" style="display:none">
     <div class="cmpHeader">
       <h2>전체 신청 vs <em>확정자</em> 비교</h2>
-      <p>기준일 2026.07.22 · 전체 75건 → 확정 23명 (선발률 31%)</p>
+      <p>기준일 2026.07.22 · 전체 75건 → 확정 22명 (선발률 29%)</p>
     </div>
     <div class="cmpSummary">
       <div class="sc"><div class="n">75</div><div class="l">전체 신청</div></div>
-      <div class="sc accent"><div class="n">23</div><div class="l">확정</div></div>
-      <div class="sc"><div class="n">31%</div><div class="l">선발률</div></div>
-      <div class="sc"><div class="n">78%</div><div class="l">확정 중 1~2순위</div></div>
+      <div class="sc accent"><div class="n">22</div><div class="l">확정</div></div>
+      <div class="sc"><div class="n">29%</div><div class="l">선발률</div></div>
+      <div class="sc"><div class="n">77%</div><div class="l">확정 중 1~2순위</div></div>
     </div>
     <div class="cmpGrid2">
       <div class="cmpC full">
         <h3>1. 활동 분야 <span>복수 선택, 비율(%)</span></h3>
         <div><canvas id="cmpC1"></canvas></div>
-        <div class="cmpI"><strong>인권/젠더</strong> 9%→22%(↑13%p), <strong>문화/예술</strong> 19%→26%(↑) 확대 · <strong>교육</strong> 48%→43%(↓), <strong>노동/일자리</strong> 19%→9%(↓) 축소</div>
+        <div class="cmpI"><strong>인권/젠더</strong> 9%→23%(↑14%p), <strong>문화/예술</strong> 19%→27%(↑) 확대 · <strong>교육</strong> 48%→45%(↓), <strong>노동/일자리</strong> 19%→9%(↓) 축소</div>
       </div>
       <div class="cmpC full">
         <h3>6대 테마 비교 <span>1인 1테마, 핵심 활동 기준</span></h3>
@@ -642,27 +642,27 @@
       <div class="cmpC">
         <h3>2. 참가자 구분</h3>
         <div><canvas id="cmpC2"></canvas></div>
-        <div class="cmpI"><strong>공개모집</strong> 64%→17%(↓) · <strong>1~2순위</strong> 24%→78%(↑) — 검증된 인원 위주 선별</div>
+        <div class="cmpI"><strong>공개모집</strong> 64%→18%(↓) · <strong>1~2순위</strong> 24%→77%(↑) — 검증된 인원 위주 선별</div>
       </div>
       <div class="cmpC">
         <h3>3. 활동 기간 <span>조직 연차</span></h3>
         <div><canvas id="cmpC3"></canvas></div>
-        <div class="cmpI"><strong>10년+</strong> 24%→43%(↑) · <strong>1~3년</strong> 32%→9%(↓) — 베테랑 조직 선호</div>
+        <div class="cmpI"><strong>10년+</strong> 24%→45%(↑) · <strong>1~3년</strong> 32%→9%(↓) — 베테랑 조직 선호</div>
       </div>
       <div class="cmpC">
         <h3>4. 조직 유형</h3>
         <div><canvas id="cmpC4"></canvas></div>
-        <div class="cmpI"><strong>비영리</strong> 39%→48%(↑) · <strong>소셜벤처</strong> 31%→9%(↓) — 비영리 비중 높아짐</div>
+        <div class="cmpI"><strong>비영리</strong> 39%→45%(↑) · <strong>소셜벤처</strong> 31%→9%(↓) — 비영리 비중 높아짐</div>
       </div>
       <div class="cmpC">
         <h3>5. 활동 지역 <span>복수 선택</span></h3>
         <div><canvas id="cmpC5"></canvas></div>
-        <div class="cmpI"><strong>전국</strong> 44%→52%(↑) · <strong>대구/경북</strong> 9%→17%(↑) — 전국 단위 + 경북 활동 확보</div>
+        <div class="cmpI"><strong>전국</strong> 44%→55%(↑) · <strong>대구/경북</strong> 9%→14%(↑) — 전국 단위 + 경북 활동 확보</div>
       </div>
       <div class="cmpC">
         <h3>6. 유입 경로</h3>
         <div><canvas id="cmpC6"></canvas></div>
-        <div class="cmpI">확정자 70%가 <strong>기참여 리텐션</strong>(35%)과 <strong>직접 섭외</strong>(35%) — 네트워크 기반 선발</div>
+        <div class="cmpI">확정자 68%가 <strong>기참여 리텐션</strong>(36%)과 <strong>직접 섭외</strong>(32%) — 네트워크 기반 선발</div>
       </div>
       <div class="cmpC">
         <h3>7. 기대 결과물 수준</h3>
@@ -1519,36 +1519,37 @@ function initCmpCharts(){
   function d(a,c){
     return [
       {label:'전체 (75명)',data:a,backgroundColor:aC,borderRadius:4,barPercentage:.7,categoryPercentage:.75},
-      {label:'확정 (23명)',data:c,backgroundColor:cC,borderRadius:4,barPercentage:.7,categoryPercentage:.75}
+      {label:'확정 (22명)',data:c,backgroundColor:cC,borderRadius:4,barPercentage:.7,categoryPercentage:.75}
     ];
   }
   new Chart(document.getElementById('cmpC1'),{type:'bar',
     data:{labels:['교육','아동/청소년','돌봄/복지','환경/기후','지역/도시','건강/의료','문화/예술','노동/일자리','장애/접근성','노인','이주민/다문화','인권/젠더'],
-    datasets:d([48,21,32,21,20,20,19,19,17,15,11,9],[43,26,26,17,17,13,26,9,17,4,17,22])},options:gO('%')});
+    datasets:d([48,21,32,21,20,20,19,19,17,15,11,9],[45,27,27,18,14,14,27,9,18,5,18,23])},options:gO('%')});
   new Chart(document.getElementById('cmpCT'),{type:'bar',
     data:{labels:['기후/환경','마음건강/돌봄','접근성','사회적포용','교육/제도','지역소멸'],
     datasets:d([22,16,25,12,12,12],[14,18,23,18,14,14])},
+
     options:{...gO('%'),indexAxis:'x',scales:{
       y:{grid:{color:hr,drawBorder:false},ticks:{color:mt,callback:v=>v+'%'},border:{display:false},max:40},
       x:{grid:{display:false},ticks:{color:ik,font:{weight:600,size:11}},border:{display:false}}}}});
   new Chart(document.getElementById('cmpC2'),{type:'bar',
     data:{labels:['공개모집','직접 섭외','관계자 추천','기참여','대학 연계','브라이언 펠로우'],
-    datasets:d([64,11,12,9,3,1],[17,35,4,30,9,4])},options:gO('%')});
+    datasets:d([64,11,12,9,3,1],[18,32,5,32,9,5])},options:gO('%')});
   new Chart(document.getElementById('cmpC3'),{type:'bar',
     data:{labels:['10년+','3~5년','5~10년','1~3년','1년 미만'],
-    datasets:d([24,20,9,32,15],[43,30,13,9,4])},options:gO('%')});
+    datasets:d([24,20,9,32,15],[45,27,14,9,5])},options:gO('%')});
   new Chart(document.getElementById('cmpC4'),{type:'bar',
     data:{labels:['비영리단체','소셜벤처/스타트업','사회적기업','기타','협동조합','공공기관'],
-    datasets:d([39,31,15,9,5,1],[48,9,26,13,0,4])},options:gO('%')});
+    datasets:d([39,31,15,9,5,1],[45,9,27,14,0,5])},options:gO('%')});
   new Chart(document.getElementById('cmpC5'),{type:'bar',
     data:{labels:['전국','서울','경기/인천','온라인','대구/경북','대전/세종/충청','부산/울산/경남','강원','광주/전라'],
-    datasets:d([44,55,27,37,9,12,8,4,3],[52,48,30,22,17,4,4,4,0])},options:gO('%')});
+    datasets:d([44,55,27,37,9,12,8,4,3],[55,50,32,23,14,5,5,5,0])},options:gO('%')});
   new Chart(document.getElementById('cmpC6'),{type:'bar',
     data:{labels:['기참여 리텐션','직접 섭외/제안','지인·관계자 추천','대학 연계','공식 채널/SNS','커뮤니티/오픈채팅','기타'],
-    datasets:d([11,11,12,3,17,3,44],[35,35,4,9,4,0,13])},options:gO('%')});
+    datasets:d([11,11,12,3,17,3,44],[36,32,5,9,5,0,14])},options:gO('%')});
   new Chart(document.getElementById('cmpC7'),{type:'bar',
     data:{labels:['프로토타입','실서비스 배포','AI/데이터 모델','화면 목업/시안','기획안/제안서'],
-    datasets:d([40,33,12,8,7],[48,26,4,9,13])},
+    datasets:d([40,33,12,8,7],[50,27,5,9,9])},
     options:{...gO('%'),indexAxis:'x',scales:{
       y:{grid:{color:hr,drawBorder:false},ticks:{color:mt,callback:v=>v+'%'},border:{display:false}},
       x:{grid:{display:false},ticks:{color:ik,font:{weight:600,size:11}},border:{display:false}}}}});
