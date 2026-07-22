@@ -1500,6 +1500,7 @@ function initCmpCharts(){
   _cmpDone = true;
   const FF = "'Pretendard Variable', Pretendard, -apple-system, sans-serif";
   const aC = '#cfcfcf', cC = '#E470DC', hr = '#ECEFF3', ik = '#1C1C1C', mt = '#8C8C8C';
+  const aN=75, cN=22;
   function gO(u){
     return {
       indexAxis:'y', responsive:true,
@@ -1508,7 +1509,11 @@ function initCmpCharts(){
           labels:{ padding:16, usePointStyle:true, pointStyle:'circle', color:ik, font:{family:FF,size:12,weight:500} }},
         tooltip:{ backgroundColor:ik, cornerRadius:6, padding:10,
           titleFont:{family:FF,weight:600}, bodyFont:{family:FF},
-          callbacks:{ label:ctx=>ctx.dataset.label+': '+ctx.raw+(u||'%') }}
+          callbacks:{ label:ctx=>{
+            const n = ctx.datasetIndex===0 ? aN : cN;
+            const cnt = Math.round(ctx.raw*n/100);
+            return ctx.dataset.label+': '+cnt+'명 ('+ctx.raw+'%)';
+          }}}
       },
       scales:{
         x:{grid:{color:hr,drawBorder:false},ticks:{color:mt,callback:v=>v+(u||'%')},border:{display:false}},
@@ -1518,8 +1523,8 @@ function initCmpCharts(){
   }
   function d(a,c){
     return [
-      {label:'전체 (75명)',data:a,backgroundColor:aC,borderRadius:4,barPercentage:.7,categoryPercentage:.75},
-      {label:'확정 (22명)',data:c,backgroundColor:cC,borderRadius:4,barPercentage:.7,categoryPercentage:.75}
+      {label:'전체',data:a,backgroundColor:aC,borderRadius:4,barPercentage:.7,categoryPercentage:.75},
+      {label:'확정',data:c,backgroundColor:cC,borderRadius:4,barPercentage:.7,categoryPercentage:.75}
     ];
   }
   new Chart(document.getElementById('cmpC1'),{type:'bar',
