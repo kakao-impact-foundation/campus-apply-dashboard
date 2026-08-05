@@ -606,7 +606,11 @@ function renderSchoolPage(){
   const bySchool = SCHOOLS.map(u => ({
     ...u,
     people: PEOPLE.filter(p => p.schoolList.includes(u.name))
-  })).sort((a, b) => b.people.length - a.people.length);
+  })).sort((a, b) => {
+    /* 가나다순 — 한글 대학 먼저, 영문(GIST·KAIST·UNIST)은 뒤에 알파벳순 */
+    const grp = s => /^[가-힣]/.test(s.short) ? 0 : 1;
+    return grp(a) - grp(b) || a.short.localeCompare(b.short, 'ko');
+  });
   const anyPpl = PEOPLE.filter(p => p.anySchool);
   const max = Math.max(...bySchool.map(s => s.people.length), 1);
 
