@@ -169,6 +169,7 @@
   }
   .p:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(28,28,28,.08); }
   .p .over { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .ldap { font-family: 'Pretendard Variable', Pretendard, sans-serif; font-size: 12px; font-weight: 600; color: var(--muted); }
   .p .name {
     font-family: 'KakaoBigSans', Pretendard, sans-serif;
     font-weight: 800; font-size: 17px; margin-bottom: 7px;
@@ -269,6 +270,13 @@
   .mSec p { font-size: 14.5px; line-height: 1.75; color: var(--body); white-space: pre-line; }
 
   footer { margin-top: 48px; text-align: center; font-size: 12.5px; color: var(--muted); }
+  .sheetBtn {
+    display: inline-block; margin-top: 12px;
+    background: var(--card); border-radius: 999px; padding: 10px 18px;
+    font-size: 13px; font-weight: 700; color: var(--body); text-decoration: none;
+    transition: background .2s, color .2s;
+  }
+  .sheetBtn:hover { background: var(--ink); color: #fff; }
 
   /* ── 비밀번호 게이트 (캐주얼 차단) ──── */
   body.locked .wrap { display: none; }
@@ -407,7 +415,8 @@
     <div class="schoolGrid" id="schoolGrid"></div>
   </div>
 
-  <footer>카카오임팩트 · 테크포임팩트 캠퍼스 — 내부 운영용 대시보드 · <a href="./index.html" style="color:inherit">사회혁신가 현황 →</a></footer>
+  <footer>카카오임팩트 · 테크포임팩트 캠퍼스 — 내부 운영용 대시보드<br/>
+  <a class="sheetBtn" href="https://docs.google.com/spreadsheets/d/14GF-Du7sDDciiUCKJcsazNzy1ae8nf1MRrzgsfIJYuk/edit?resourcekey=&gid=679275159#gid=679275159" target="_blank" rel="noopener">📄 멘토 신청서 응답 시트 열기 →</a></footer>
 </div>
 
 <div class="overlay" id="overlay" role="dialog" aria-modal="true">
@@ -454,6 +463,11 @@ let PEOPLE = [];
 let jobFilter = null;
 let expFilter = null;
 
+/* 공동체명 축약: '카카오'는 그대로, 나머지는 '카카오' 접두어 제거 (모빌리티, 엔터테인먼트 …) */
+function shortCo(c){
+  c = String(c || '').trim();
+  return c === '카카오' ? c : (c.replace(/^카카오\s*/, '') || c);
+}
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 /* ── 희망 학교 파싱: "[지역] 학교명" / 접두어 없는 옛 응답 / "특별히 없음" 모두 처리 ── */
@@ -567,7 +581,7 @@ function renderList(){
   list.innerHTML = ppl.map((p, i) => `
     <div class="p" style="animation-delay:${Math.min(i * 0.05, 0.6)}s" data-idx="${p.idx}">
       <div class="over"><span>${esc(p.company)}</span><span>·</span><span>${esc(p.dept)}</span><span>·</span><span>${esc(p.ts.slice(5))} 신청</span></div>
-      <div class="name">${esc(p.name)}
+      <div class="name">${esc(p.name)}${p.ldap ? `<span class="ldap">(${esc(p.ldap)})</span>` : ''}
         <span class="jChip" style="--jc:${jobColor(p.job)}">${esc(p.job || '기타')}</span>
         ${p.isRe ? '<span class="rChip">🔁 재참여</span>' : ''}
       </div>
@@ -605,7 +619,7 @@ function renderSchoolPage(){
   const li = p => `
     <li data-idx="${p.idx}">
       <span class="jDot" style="--jc:${jobColor(p.job)}"></span>
-      <span class="nm">${esc(p.name)} <span style="color:var(--muted);font-weight:600">· ${esc(p.company)}</span></span>
+      <span class="nm">${esc(p.name)}${p.ldap ? `<span class="ldap">(${esc(p.ldap)})</span>` : ''} <span style="color:var(--muted);font-weight:600">· ${esc(shortCo(p.company))}</span></span>
       <span class="tg ${p.isRe ? 're' : ''}">${p.isRe ? '🔁 재참여' : '✨ 신규'}</span>
     </li>`;
 
@@ -661,13 +675,12 @@ function openPerson(idx){
   modal.innerHTML = `
     <button class="mClose" aria-label="닫기">✕</button>
     <div class="mOver"><span>${esc(p.ts)} 신청</span></div>
-    <div class="mTitle">${esc(p.name)}
+    <div class="mTitle">${esc(p.name)}${p.ldap ? `<span class="ldap" style="font-size:15px">(${esc(p.ldap)})</span>` : ''}
       <span class="jChip" style="--jc:${jobColor(p.job)};font-size:13px;padding:5px 13px">${esc(p.job || '기타')}</span>
       ${p.isRe ? '<span class="rChip" style="font-size:13px;padding:5px 13px">🔁 재참여</span>' : ''}
     </div>
     <div class="mChips">${schoolChips}</div>
     <div class="mGrid">
-      <div class="mRow"><span class="k">LDAP</span><span class="v">${esc(p.ldap)}</span></div>
       <div class="mRow"><span class="k">소속</span><span class="v">${esc(p.company)} · ${esc(p.dept)}</span></div>
       <div class="mRow"><span class="k">멘토 참여 경험</span><span class="v">${p.isRe ? '있음 (재참여)' : '처음 (신규)'}</span></div>
       ${p.referral ? `<div class="mRow"><span class="k">추천 크루</span><span class="v">${esc(p.referral)}</span></div>` : ''}
@@ -701,7 +714,7 @@ function renderAll(data){
       : `기준: ${data.updatedAt}` + (DATA_URL ? ' · 시트 자동 연동' : ' · 수동 저장본');
   renderHero();
   renderBars('jobBars', tally(p => p.job), jobColor);
-  renderBars('coBars', tally(p => p.company));
+  renderBars('coBars', tally(p => shortCo(p.company)));
   renderFilters();
   renderList();
   if (document.getElementById('page-school').style.display !== 'none') renderSchoolPage();
