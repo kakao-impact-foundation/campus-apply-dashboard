@@ -1,24 +1,21 @@
-# 캠퍼스 신청현황 대시보드 (사회혁신가 + 멘토)
+# 캠퍼스 사회혁신가 신청현황 대시보드
 
-테크포임팩트 캠퍼스 26-2 모집 현황을 보여주는 내부용 대시보드 2종.
+테크포임팩트 캠퍼스 26-2 사회혁신조직 모집 현황을 보여주는 내부용 대시보드.
 
-- **사회혁신가**: https://kakao-impact-foundation.github.io/campus-apply-dashboard/ (비밀번호 게이트)
-- **멘토**: https://kakao-impact-foundation.github.io/campus-apply-dashboard/mentor.html (같은 비밀번호)
+- **대시보드 주소**: https://kakao-impact-foundation.github.io/campus-apply-dashboard/ (비밀번호 게이트)
 - 내부 공유용: 화면 앞 비밀번호(캐주얼 차단) + `noindex` 메타 + `robots.txt`로 검색 색인 차단
 - 소스에는 신청 데이터가 들어있지 않음 (모든 데이터는 열람 시점에 Apps Script에서 로드)
 
-- **데이터 원본**: [사회혁신가 응답 시트](https://docs.google.com/spreadsheets/d/13T-rtHCFIKb5VHrFL5AMgqNB5KmIHSyEc0KB-C8nrac/edit?gid=229370971) · [멘토 응답 시트](https://docs.google.com/spreadsheets/d/14GF-Du7sDDciiUCKJcsazNzy1ae8nf1MRrzgsfIJYuk/edit?gid=679275159)
-- **목표**: 사회혁신가 24팀 (조직 기준, 중복 신청 1팀 카운트) · 멘토 60명
-- **디자인**: [campus_2026_spring 파트너 페이지](https://kakao-impact-foundation.github.io/campus_2026_spring/partner/) 톤 — 사회혁신가는 핑크, 멘토는 앰버 액센트로 구분
+- **데이터 원본**: [신청 응답 구글시트](https://docs.google.com/spreadsheets/d/13T-rtHCFIKb5VHrFL5AMgqNB5KmIHSyEc0KB-C8nrac/edit?gid=229370971)
+- **목표**: 24팀 (조직 기준, 같은 조직 중복 신청은 1팀으로 카운트)
+- **디자인**: [campus_2026_spring 파트너 페이지](https://kakao-impact-foundation.github.io/campus_2026_spring/partner/) 톤 (카카오빅산스 + 검정 테두리 + 노랑 #FAE100)
 
 ## 파일
 
 | 파일 | 역할 |
 |---|---|
-| `index.html` | 사회혁신가 대시보드 본체 |
-| `apps-script.gs` | 사회혁신가 시트 연동용 Apps Script (사회혁신가 응답 시트에 설치) |
-| `mentor.html` | 멘토 대시보드 본체 (목표 60명 · 직군/소속 분포 · 12개 대학별 희망 현황) |
-| `mentor-apps-script.gs` | 멘토 시트 연동용 Apps Script (멘토 응답 시트에 설치) |
+| `index.html` | 대시보드 본체. 브라우저로 열면 끝 (더블클릭) |
+| `apps-script.gs` | 시트 자동 연동용 Apps Script. 파일 상단 주석의 설치 방법 참고 |
 
 ## 시트 자동 연동 켜기
 
