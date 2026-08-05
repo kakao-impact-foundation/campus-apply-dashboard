@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>테크포임팩트 캠퍼스 · 멘토 신청 현황</title>
+<style>
+  @font-face {
+    font-family: 'KakaoBigSans';
+    src: url('https://kakao-impact-foundation.github.io/campus_2026_spring/_next/static/media/KakaoBigSans_ExtraBold-s.p.3i93y_9jgiys7.woff2') format('woff2');
+    font-weight: 800; font-display: swap;
+  }
+  @font-face {
+    font-family: 'KakaoBigSans';
+    src: url('https://kakao-impact-foundation.github.io/campus_2026_spring/_next/static/media/KakaoBigSans_Bold-s.p.2g6eznqppexyp.woff2') format('woff2');
+    font-weight: 700; font-display: swap;
+  }
+  @font-face {
+    font-family: 'KakaoBigSans';
+    src: url('https://kakao-impact-foundation.github.io/campus_2026_spring/_next/static/media/KakaoBigSans_Regular-s.p.1jbj0r48zwnit.woff2') format('woff2');
+    font-weight: 400; font-display: swap;
+  }
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+  :root {
+    --acc: #F5B301;        /* 멘토 = 앰버 (사회혁신가 핑크와 구분) */
+    --acc-text: #8F6400;   /* 흰 배경 위 텍스트용 (대비 4.5:1) */
+    --acc-soft: #FCE9AE;
+    --acc-faint: #FDF6DE;
+    --ink: #1C1C1C;
+    --muted: #8C8C8C;
+    --body: #4A4A4A;
+    --card: #F6F8FA;
+    --line: #ECEFF3;
+    --white: #FFFFFF;
+    --dev: #3B82F6;   /* 개발 */
+    --plan: #0FA36B;  /* 기획 */
+    --design: #E8830C;/* 디자인 */
+    --data: #8B5CF6;  /* 데이터/AI */
+    --etc: #8C8C8C;   /* 기타 */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, sans-serif;
+    background: var(--white);
+    color: var(--ink);
+    padding: 44px 28px 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  .rise { animation: rise .55s cubic-bezier(.2,.7,.2,1) both; }
+
+  /* ── header ─────────────────────────── */
+  header { margin-bottom: 36px; }
+  .topBadge { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .topBadge svg { height: 22px; width: auto; display: block; }
+  .topBadge .term { color: var(--muted); font-weight: 700; font-size: 13px; }
+  h1 {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800;
+    font-size: clamp(28px, 4vw, 42px);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 14px;
+  }
+  .updated { margin-top: 6px; font-size: 13px; color: var(--muted); }
+
+  /* ── 히어로 ─────────────────────────── */
+  .card { background: var(--card); border-radius: 24px; padding: 26px; }
+  .cardTitle {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800; font-size: 19px; margin-bottom: 4px;
+  }
+  .cardSub { font-size: 13.5px; color: var(--muted); margin-bottom: 16px; }
+
+  .hero { display: flex; align-items: center; gap: 40px; margin-bottom: 22px; }
+  .hero .heroL { flex: 0 0 auto; }
+  .hero .heroR { flex: 1; min-width: 260px; }
+  @media (max-width: 720px) { .hero { flex-direction: column; align-items: stretch; gap: 18px; } }
+
+  .statLabel { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
+  .goalRow { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .bigNum {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800; font-size: 58px; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .goalRow .of { font-size: 19px; font-weight: 700; color: var(--muted); }
+  .goalRow .pct {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800; font-size: 19px; color: var(--acc-text);
+    background: var(--acc-faint); border-radius: 999px; padding: 5px 13px;
+  }
+  .meter { height: 14px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  .meter > i {
+    display: block; height: 100%; width: 0;
+    background: linear-gradient(90deg, var(--acc-soft), var(--acc));
+    border-radius: 999px; transition: width 1s cubic-bezier(.2,.7,.2,1);
+  }
+  .subStats { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+  .chip {
+    font-size: 12.5px; font-weight: 600; color: var(--body);
+    background: var(--white); border-radius: 999px; padding: 7px 13px;
+  }
+  .chip b { font-weight: 800; color: var(--ink); }
+
+  /* ── 페이지 탭 ── */
+  .pageTabs { display: flex; gap: 8px; margin: 20px 0 24px; flex-wrap: wrap; }
+  .pTab {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    background: var(--card); border: none; border-radius: 999px;
+    padding: 11px 22px; font-size: 15px; font-weight: 800; color: var(--muted);
+    cursor: pointer; transition: background .2s, color .2s, transform .15s;
+  }
+  .pTab:hover { transform: translateY(-1px); }
+  .pTab.on { background: var(--ink); color: #fff; }
+
+  /* ── 홈 레이아웃 ── */
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(330px, 6fr);
+    gap: 22px; align-items: start;
+  }
+  @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+  .col { display: flex; flex-direction: column; gap: 22px; }
+
+  /* ── 직군/소속 바 차트 ── */
+  .barRows { display: flex; flex-direction: column; gap: 11px; }
+  .barRow { display: grid; grid-template-columns: 92px 1fr 40px; align-items: center; gap: 10px; }
+  .barRow .lb { font-size: 13.5px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .barRow .lb i { width: 9px; height: 9px; border-radius: 50%; background: var(--bc, var(--acc)); flex: 0 0 auto; }
+  .barRow .tr { height: 12px; background: var(--white); border-radius: 999px; overflow: hidden; }
+  .barRow .tr i { display: block; height: 100%; width: 0; background: var(--bc, var(--acc)); border-radius: 999px; transition: width .8s cubic-bezier(.2,.7,.2,1); }
+  .barRow .n { font-size: 13px; font-weight: 800; color: var(--body); text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ── 신청자 리스트 ── */
+  .listHead { display: flex; align-items: baseline; gap: 10px; padding: 2px 4px; }
+  .listHead h2 { font-family: 'KakaoBigSans', Pretendard, sans-serif; font-weight: 800; font-size: 21px; }
+  .listHead .count { font-size: 14px; color: var(--acc-text); font-weight: 800; }
+  .listHead .reset {
+    margin-left: auto; background: none; border: none; cursor: pointer;
+    font-size: 12.5px; font-weight: 700; color: var(--muted); font-family: inherit;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .listHead .reset.on { opacity: 1; pointer-events: auto; }
+  .listHead .reset:hover { color: var(--ink); }
+
+  .kwRow { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 4px; }
+  .kw {
+    background: var(--card); border: none; border-radius: 999px;
+    padding: 8px 15px; font-size: 13px; font-weight: 700; color: var(--body);
+    cursor: pointer; font-family: inherit; transition: background .2s, color .2s;
+  }
+  .kw:hover { background: var(--line); }
+  .kw.on { background: var(--ink); color: #fff; }
+  .kw .n { color: var(--muted); font-weight: 700; margin-left: 3px; }
+  .kw.on .n { color: rgba(255,255,255,.6); }
+
+  .pList { display: flex; flex-direction: column; gap: 12px; }
+  .p {
+    position: relative; background: var(--card); border-radius: 20px;
+    padding: 18px 44px 18px 22px; cursor: pointer;
+    transition: transform .18s, box-shadow .18s;
+    animation: rise .4s ease both;
+  }
+  .p:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(28,28,28,.08); }
+  .p .over { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .p .name {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800; font-size: 17px; margin-bottom: 7px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .jChip { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 3px 10px; color: #fff; background: var(--jc, var(--etc)); }
+  .rChip { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 3px 10px; background: var(--acc-faint); color: var(--acc-text); }
+  .p .schools { display: flex; flex-wrap: wrap; gap: 5px; }
+  .p .schools span { font-size: 11.5px; font-weight: 700; color: var(--body); background: var(--white); border-radius: 999px; padding: 4px 10px; }
+  .p .arrow { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 18px; }
+  .empty { text-align: center; color: var(--muted); padding: 30px 0; font-size: 14px; background: var(--card); border-radius: 20px; }
+
+  /* ── 학교별 페이지 ── */
+  .schoolGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(285px, 1fr)); gap: 20px; align-items: start; }
+  .sCard .sHead { display: flex; align-items: baseline; gap: 9px; margin-bottom: 4px; flex-wrap: wrap; }
+  .sCard .sHead h3 { font-family: 'KakaoBigSans', Pretendard, sans-serif; font-size: 18px; font-weight: 800; }
+  .sCard .rg { font-size: 11.5px; font-weight: 700; color: var(--muted); background: var(--white); border-radius: 999px; padding: 3px 10px; }
+  .sCard .sCount {
+    margin-left: auto;
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800; font-size: 21px; color: var(--acc-text);
+    font-variant-numeric: tabular-nums;
+  }
+  .sCard .sCount.zero { color: var(--muted); }
+  .sBar { height: 8px; background: var(--white); border-radius: 999px; overflow: hidden; margin: 10px 0 14px; }
+  .sBar i { display: block; height: 100%; width: 0; background: var(--acc); border-radius: 999px; transition: width .8s cubic-bezier(.2,.7,.2,1); }
+  .sJobs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 13px; }
+  .sList { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .sList li {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; color: var(--ink);
+    cursor: pointer; animation: rise .35s ease both;
+  }
+  .sList li .jDot { width: 8px; height: 8px; border-radius: 50%; background: var(--jc, var(--etc)); flex: 0 0 auto; }
+  .sList li .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sList li:hover .nm { color: var(--acc-text); }
+  .sList li .tg { font-size: 10.5px; font-weight: 800; border-radius: 999px; padding: 2px 8px; background: var(--white); color: var(--muted); flex: 0 0 auto; }
+  .sList li .tg.re { background: var(--acc-faint); color: var(--acc-text); }
+  .sCard .none { font-size: 13.5px; color: var(--muted); }
+  .sNote { grid-column: 1 / -1; font-size: 14px; color: var(--body); font-weight: 600; line-height: 1.7; }
+
+  /* ── 모달 ─────────────────────────── */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(20,20,20,.45);
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 50;
+    padding: 24px 16px 0;
+  }
+  @media (min-width: 641px) { .overlay { align-items: center; padding: 40px 24px; } }
+  .overlay.vis { opacity: 1; pointer-events: auto; }
+  .modal {
+    position: relative; background: var(--white); border-radius: 26px 26px 0 0;
+    max-width: 720px; width: 100%; max-height: 88vh; overflow-y: auto;
+    padding: 32px 30px 40px;
+    transform: translateY(24px); transition: transform .3s cubic-bezier(.2,.7,.2,1);
+  }
+  @media (min-width: 641px) { .modal { border-radius: 26px; } }
+  .overlay.vis .modal { transform: none; }
+  @media (max-width: 640px) { .modal { padding: 26px 22px 30px; } }
+  .mClose {
+    position: absolute; right: 20px; top: 20px;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--card); border: none; cursor: pointer;
+    font-size: 16px; color: var(--body); font-family: inherit;
+    transition: background .2s;
+  }
+  .mClose:hover { background: var(--line); }
+  .mOver { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .mTitle {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800; font-size: 26px; letter-spacing: -0.01em;
+    margin-bottom: 14px; padding-right: 40px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .mChips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 22px; }
+  .mChips span {
+    font-size: 12px; font-weight: 700;
+    background: var(--acc-faint); color: var(--acc-text);
+    border-radius: 999px; padding: 5px 12px;
+  }
+  .mChips span.gray { background: var(--card); color: var(--body); }
+  .mGrid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px;
+    background: var(--card); border-radius: 18px; padding: 18px 20px;
+    margin-bottom: 22px;
+  }
+  @media (max-width: 640px) { .mGrid { grid-template-columns: 1fr; } }
+  .mRow { font-size: 13.5px; line-height: 1.5; }
+  .mRow .k { display: block; font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+  .mRow .v { color: var(--ink); font-weight: 600; word-break: break-all; }
+  .mSec { margin-bottom: 20px; }
+  .mSec h3 {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800; font-size: 15px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .mSec h3::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--acc); }
+  .mSec p { font-size: 14.5px; line-height: 1.75; color: var(--body); white-space: pre-line; }
+
+  footer { margin-top: 48px; text-align: center; font-size: 12.5px; color: var(--muted); }
+
+  /* ── 비밀번호 게이트 (캐주얼 차단) ──── */
+  body.locked .wrap { display: none; }
+  #gate {
+    position: fixed; inset: 0; z-index: 100;
+    background: var(--white);
+    display: none; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  body.locked #gate { display: flex; }
+  .gateCard {
+    background: var(--card); border-radius: 24px;
+    padding: 40px 36px; max-width: 380px; width: 100%;
+    text-align: center;
+  }
+  .gateCard h2 {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800; font-size: 20px; margin: 14px 0 6px;
+  }
+  .gateCard p { font-size: 13.5px; color: var(--muted); margin-bottom: 20px; }
+  .gateCard input {
+    width: 100%; border: none; border-radius: 999px;
+    padding: 13px 18px; font-size: 15px; font-family: inherit;
+    background: var(--white); text-align: center;
+    outline: 2px solid transparent; transition: outline-color .2s;
+  }
+  .gateCard input:focus { outline-color: var(--acc); }
+  .gateCard button {
+    width: 100%; margin-top: 10px;
+    border: none; border-radius: 999px;
+    padding: 13px 18px; font-size: 15px; font-weight: 700; font-family: inherit;
+    background: var(--ink); color: #fff; cursor: pointer;
+  }
+  .gateCard .err { color: var(--acc-text); font-size: 13px; font-weight: 700; margin-top: 10px; min-height: 18px; }
+</style>
+</head>
+<body class="locked">
+<div id="gate">
+  <div class="gateCard">
+    <div style="font-family:'KakaoBigSans',Pretendard,sans-serif;font-weight:800;font-size:13px;">TECH FOR !MPACT <span style="background:var(--acc);color:var(--ink);border-radius:999px;padding:3px 10px;font-size:11.5px;">Campus</span></div>
+    <h2>내부 대시보드</h2>
+    <p>멘토 신청 현황은 운영팀용이에요.<br/>비밀번호를 입력해 주세요.</p>
+    <input type="password" id="gatePw" placeholder="비밀번호" autocomplete="off" />
+    <button id="gateBtn">들어가기</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <header class="rise">
+    <div class="topBadge">
+      <svg aria-label="테크포임팩트 캠퍼스" viewBox="0 0 1693 149" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_124_554)">
+<path d="M1618.04 0.000976562H1195.33C1154.41 0.000976562 1121.24 33.1727 1121.24 74.0921C1121.24 115.011 1154.41 148.183 1195.33 148.183H1618.04C1658.96 148.183 1692.13 115.011 1692.13 74.0921C1692.13 33.1727 1658.96 0.000976562 1618.04 0.000976562Z" fill="#E470DC"/>
+<path d="M1215.17 113.954C1205.76 113.954 1198.06 112.375 1191.94 109.112C1185.67 105.7 1181.11 101.136 1178.12 94.9937C1175.13 88.8514 1173.56 81.8774 1173.56 73.9009C1173.56 65.9245 1175.26 57.223 1178.82 50.5262C1182.24 43.8294 1187.23 38.5616 1193.65 34.8506C1200.19 31.1397 1208.04 29.2842 1217.17 29.2842C1226.3 29.2842 1232.42 30.8624 1237.26 34.1255C1242.1 37.2606 1244.68 41.3981 1244.68 46.6659C1244.68 51.9338 1243.68 52.6589 1241.55 54.7917C1239.42 56.7964 1236.71 57.6495 1232.85 57.6495C1228.99 57.6495 1228.28 57.223 1226.43 56.5192C1224.42 55.8154 1222.44 54.9409 1220.31 54.2371C1218.17 53.5333 1215.74 53.1068 1212.88 53.1068C1210.03 53.1068 1206.61 53.6826 1203.91 54.813C1201.2 55.9433 1199.06 57.7988 1197.36 60.5074C1195.78 63.2159 1194.93 66.9269 1194.93 71.7682C1194.93 78.6143 1196.5 83.6049 1199.77 86.4414C1203.05 89.2993 1207.47 90.7069 1212.73 90.7069C1218 90.7069 1217.15 90.5576 1219.58 90.2803C1222.01 89.8538 1224.29 89.5765 1226.55 89.15C1228.84 88.7234 1230.69 88.5741 1232.25 88.5741C1235.53 88.5741 1238.09 89.4272 1239.95 91.1334C1241.95 92.7116 1242.81 95.2709 1242.81 98.6833C1242.81 102.096 1240.52 107.086 1235.83 109.944C1231.27 112.802 1224.42 114.21 1215.32 114.21L1215.17 113.932V113.954ZM1304.8 113.804C1301.39 113.804 1299.11 112.802 1297.83 110.669C1296.7 108.536 1296.12 105.252 1296.12 100.688L1297.55 101.264C1293.29 109.816 1285.01 114.082 1272.9 114.082C1260.79 114.082 1262.92 113.079 1259.08 111.224C1255.52 109.219 1252.81 106.66 1250.95 103.525C1249.25 100.24 1248.39 96.6785 1248.39 92.6903C1248.39 85.9935 1250.83 80.7257 1255.37 76.8654C1260.08 73.0265 1266.48 71.0217 1274.33 71.0217C1282.18 71.0217 1283.73 71.7255 1287.3 73.3038C1291.01 74.7327 1294.27 76.8654 1296.98 79.574L1294.27 79.2967C1293.84 72.0241 1292.41 66.9056 1289.71 63.8984C1287.15 60.7633 1283.43 59.3344 1278.44 59.3344C1273.45 59.3344 1273.45 59.7609 1270.89 60.4647C1268.34 61.1685 1266.18 62.0429 1263.92 62.896C1261.64 63.5998 1259.65 64.0264 1257.5 64.0264C1255.35 64.0264 1253.24 63.3226 1251.81 61.8937C1250.53 60.4647 1249.8 58.6092 1249.8 56.3272C1249.8 54.0452 1251.23 50.3342 1254.07 47.775C1256.93 45.0664 1260.76 43.0616 1265.48 41.3554C1270.19 39.7772 1275.31 38.9241 1280.88 38.9241C1286.44 38.9241 1293.69 40.3531 1298.68 43.3389C1303.67 46.3247 1307.39 50.7608 1309.67 56.6045C1311.67 61.3178 1312.95 66.735 1313.81 72.5786C1314.66 78.4223 1315.08 84.6926 1315.08 91.3893C1315.08 98.0861 1314.66 101.797 1313.95 105.081C1313.25 108.366 1312.1 110.499 1310.54 111.778C1309.11 113.058 1307.13 113.634 1304.7 113.634H1304.85V113.783L1304.8 113.804ZM1280 99.1311C1282.28 99.1311 1284.42 98.8539 1286.55 98.2781C1288.83 97.7022 1290.69 96.6998 1292.24 95.4202C1293.82 94.1406 1294.67 92.5623 1294.67 90.5789C1294.67 88.5955 1293.97 87.4438 1292.67 86.4414C1291.39 85.311 1289.81 84.5859 1287.83 84.0101C1285.7 83.4342 1283.56 83.157 1281.28 83.157C1277.29 83.157 1274.01 83.8608 1271.88 85.439C1269.59 86.8679 1268.59 88.8514 1268.59 91.2827C1268.59 93.714 1269.59 95.6975 1271.73 97.1264C1273.86 98.406 1276.57 99.1311 1280.28 99.1311H1280ZM1380.77 58.8012C1381.48 55.5168 1382.91 52.6803 1384.91 50.0996C1387.04 47.5404 1389.47 45.5356 1392.33 43.9787C1395.19 42.4218 1398.33 41.5474 1401.89 41.5474C1405.45 41.5474 1409.74 42.5498 1412.87 44.4052C1416.15 46.41 1418.56 49.6731 1420.42 54.0879C1422.28 58.5026 1423.28 64.4956 1423.28 71.8962C1423.28 79.2967 1423.13 79.446 1422.85 83.3063C1422.57 87.1452 1422.15 90.7282 1421.72 93.9913C1421.29 97.2757 1420.72 99.9842 1420.14 102.266C1419.29 105.679 1417.86 108.259 1415.88 109.965C1413.87 111.672 1411.46 112.525 1408.46 112.525C1405.45 112.525 1403.74 111.672 1402.19 109.667C1400.76 107.811 1399.9 105.103 1399.9 101.69C1399.9 98.2781 1400.18 98.2781 1400.48 95.996C1400.91 93.5647 1401.33 91.0054 1401.76 88.1476C1402.19 85.2897 1402.61 82.4532 1403.04 79.7446C1403.47 76.8868 1403.61 74.1782 1403.61 71.8962C1403.61 68.4838 1402.91 65.7752 1401.48 63.9197C1400.2 62.0643 1398.2 61.0619 1395.79 61.0619C1393.38 61.0619 1390.52 62.6401 1388.81 65.9032C1386.96 69.0383 1385.96 73.6024 1385.68 79.7233C1385.4 84.7139 1385.1 89.4059 1384.83 93.4154C1384.55 97.2543 1384.12 100.688 1383.25 103.098C1382.54 105.529 1381.39 107.363 1379.83 108.515C1378.41 109.646 1376.55 110.221 1374.14 110.221C1371.73 110.221 1369.3 109.368 1367.72 107.662C1366.14 105.956 1365.29 103.247 1365.16 99.3871C1365.16 96.8278 1365.01 93.6927 1365.01 90.131C1365.01 86.5694 1365.16 82.8584 1365.16 79.446C1365.16 76.0337 1365.16 73.0265 1365.01 70.6165C1364.73 66.479 1364.01 63.3439 1362.73 61.3605C1361.45 59.377 1359.59 58.5026 1357.16 58.5026C1354.73 58.5026 1352.17 59.9315 1350.47 62.6401C1348.89 65.3487 1347.76 69.0596 1347.33 73.9009C1347.33 76.0337 1347.18 78.6143 1347.18 81.6001C1347.18 84.5859 1347.18 87.721 1347.33 90.8561C1347.33 93.842 1347.33 96.4226 1347.18 98.406C1347.18 103.397 1346.18 107.108 1344.47 109.39C1342.9 111.672 1340.49 112.674 1337.5 112.674C1334.51 112.674 1331.38 111.544 1329.8 109.539C1328.22 107.406 1327.24 103.972 1326.94 99.4084C1326.67 95.996 1326.37 92.5623 1326.24 89.15C1326.09 85.7376 1325.96 82.3039 1325.96 78.8915C1325.96 75.4792 1325.96 71.7682 1326.24 67.908C1326.52 63.9197 1326.81 60.0595 1327.09 56.4978C1327.52 52.0831 1328.52 48.2228 1329.95 45.237C1331.38 42.2512 1333.79 40.8223 1337.22 40.8223C1340.66 40.8223 1342.21 41.9526 1343.49 44.2346C1344.77 46.5167 1345.35 49.8011 1345.35 54.4931C1345.35 59.1851 1345.2 57.4789 1344.92 58.9078L1344.5 56.4765C1346.07 51.3366 1348.63 47.4977 1352.19 44.6399C1355.76 41.782 1359.74 40.2251 1364.03 40.2251C1368.32 40.2251 1374.01 42.0806 1377.15 45.6422C1380.43 49.2039 1382.14 54.0452 1382.42 60.3154L1380.84 58.8865H1380.56L1380.84 58.7372L1380.77 58.8012ZM1443.65 39.6919C1446.21 39.6919 1448.36 40.9716 1450.07 43.5308C1451.64 46.0901 1452.92 49.9504 1453.63 55.3675L1451.2 57.223C1452.62 51.6565 1455.18 47.5404 1459.04 44.6825C1462.88 41.8246 1467.45 40.2677 1472.74 40.2677C1478.03 40.2677 1481.99 41.5474 1485.7 43.9787C1489.54 46.538 1492.55 50.2489 1494.68 55.3888C1496.96 60.3794 1497.97 66.7989 1497.97 74.3488C1497.97 86.74 1495.68 95.7188 1491.12 101.562C1486.71 107.406 1480.56 110.264 1473.01 110.264C1465.46 110.264 1463.33 109.134 1460.2 106.702C1457.06 104.271 1454.93 101.435 1453.78 98.1501L1455.21 97.4463C1455.78 102.01 1456.34 106.425 1456.78 110.989C1457.21 115.404 1457.49 119.392 1457.49 122.677C1457.49 125.961 1456.78 129.523 1455.06 132.082C1453.63 134.641 1451.07 135.921 1447.63 135.921C1444.2 135.921 1441.94 134.79 1440.21 132.508C1438.63 130.226 1437.5 127.091 1436.8 123.252C1436.37 119.84 1435.95 115.553 1435.37 110.435C1434.94 105.167 1434.52 99.4511 1434.24 93.3301C1433.96 87.2092 1433.81 81.2162 1433.81 75.5218C1433.81 69.8274 1434.09 64.1117 1434.39 58.9931C1434.82 53.7253 1435.39 49.5878 1435.97 46.3034C1436.54 43.8721 1437.4 42.3152 1438.68 41.0355C1439.96 39.9052 1441.66 39.3293 1443.52 39.3293L1443.67 39.7559L1443.65 39.6919ZM1466.02 56.5192C1462.31 56.5192 1459.32 58.3746 1457.04 62.0856C1454.76 65.7966 1453.75 70.4886 1453.75 76.3322C1453.75 82.1759 1454.89 86.5907 1457.04 89.4485C1459.32 92.3064 1462.18 93.8633 1465.74 93.8633C1469.3 93.8633 1472.86 92.2851 1474.72 89.022C1476.58 85.7589 1477.58 81.4721 1477.58 76.2043C1477.58 70.9364 1476.45 64.5169 1474.17 61.3818C1471.88 58.2467 1469.17 56.6685 1466.04 56.6685V56.5192H1466.02ZM1561.8 111.949C1559.24 111.949 1557.38 111.245 1555.96 109.816C1554.68 108.387 1553.67 106.404 1553.25 104.122C1552.82 101.69 1552.54 99.2804 1552.54 96.6998L1553.12 96.2733C1552.27 99.6857 1550.56 102.544 1548.28 104.975C1546 107.406 1543.44 109.24 1540.3 110.669C1537.32 111.949 1534.31 112.525 1531.32 112.525C1528.34 112.525 1523.35 111.672 1520.06 109.667C1516.78 107.662 1514.37 104.676 1512.36 100.411C1510.66 96.5719 1509.23 91.432 1508.22 85.0125C1507.37 78.7422 1506.8 72.3227 1506.8 65.6259C1506.8 58.9292 1506.95 59.2064 1507.22 56.3699C1507.5 53.512 1507.93 51.102 1508.65 49.0973C1509.36 46.6659 1510.66 44.8318 1512.36 43.8294C1513.94 42.6991 1516.07 42.1232 1518.48 42.1232C1520.89 42.1232 1523.47 43.1256 1525.18 45.2583C1526.76 47.2631 1527.74 49.9717 1528.04 53.6613C1528.32 56.2206 1528.61 59.2277 1528.61 62.6401C1528.76 66.0525 1528.89 69.4862 1529.04 73.0478C1529.19 76.4602 1529.32 79.4674 1529.47 81.7494C1529.89 85.7376 1530.9 88.7234 1532.6 90.5789C1534.18 92.4344 1536.31 93.4368 1538.72 93.4368C1541.13 93.4368 1544.72 92.0078 1546.57 89.2993C1548.43 86.4414 1549.28 82.6025 1549.28 77.6119C1549.28 72.6213 1549.13 72.1947 1548.85 69.0596C1548.58 65.7752 1548.28 62.6401 1548 59.6543C1547.72 56.5192 1547.57 54.0879 1547.57 52.1044C1547.57 47.8389 1548.28 44.6825 1550.01 42.8484C1551.58 40.9929 1553.72 39.9905 1556.55 39.9905C1559.39 39.9905 1560.97 40.5663 1562.55 41.6967C1564.25 42.827 1565.53 44.4053 1566.38 46.41C1567.51 48.8413 1568.52 51.9764 1569.24 55.9647C1569.95 59.9529 1570.67 64.5169 1571.1 69.6568C1571.52 74.6474 1571.8 80.0645 1571.8 85.631C1571.8 94.4605 1571.1 101.029 1569.52 105.444C1568.09 109.709 1565.53 111.864 1561.82 111.864H1561.67L1561.82 112.013L1561.8 111.949ZM1614.12 39.1161C1621.66 39.1161 1627.08 40.3957 1630.37 42.827C1633.78 45.2583 1635.36 48.2442 1635.36 52.0831C1635.36 55.922 1634.65 56.3485 1632.93 57.7775C1631.5 59.2064 1629.21 59.9102 1626.51 59.9102C1623.8 59.9102 1621.52 59.4837 1618.81 58.7799C1616.1 58.0761 1612.96 57.6495 1609.4 57.6495C1605.84 57.6495 1603.98 58.2254 1602.43 59.505C1600.85 60.6353 1600 62.2136 1600 63.9197C1600 65.6259 1600.7 67.2042 1602.13 68.3345C1603.56 69.3369 1606.54 70.0407 1610.96 70.6165C1616.65 71.1924 1621.52 72.1948 1625.35 73.7516C1629.19 75.0313 1632.05 77.164 1633.91 80.0219C1635.91 82.7304 1636.76 86.5694 1636.76 91.56C1636.76 99.1098 1634.06 104.527 1628.64 108.089C1623.22 111.65 1615.67 113.356 1605.97 113.356C1596.26 113.356 1594.71 112.781 1591 111.778C1587.29 110.648 1584.45 109.07 1582.72 107.065C1581.14 104.932 1580.29 102.65 1580.29 100.091C1580.29 97.5316 1581.14 95.6761 1582.72 94.3965C1584.3 92.9676 1586.28 92.2638 1588.56 92.2638C1590.85 92.2638 1592.28 92.541 1594.26 92.9676C1596.39 93.3941 1598.52 93.8206 1600.68 94.3965C1602.96 94.823 1605.24 95.1003 1607.65 95.1003C1613.65 95.1003 1616.63 93.2448 1616.63 89.6831C1616.63 86.1215 1616.35 87.4011 1615.78 86.548C1615.2 85.6949 1614.07 84.9698 1612.22 84.4153C1610.64 83.8395 1608.08 83.4129 1604.8 82.9864C1599.95 82.5598 1595.54 81.7067 1591.98 80.5551C1588.42 79.2754 1585.56 77.4199 1583.57 74.8607C1581.57 72.1521 1580.72 68.5904 1580.72 64.0264C1580.72 56.6045 1583.57 50.7608 1589.27 46.2181C1594.96 41.654 1603.09 39.372 1613.8 39.372L1614.07 39.0947L1614.12 39.1161Z" fill="white"/>
+<path d="M66.3066 46.0238H41.9508V118.899H24.1852V46.0238H0V29.0259H66.1573V46.0238H66.3066Z" fill="#191919"/>
+<path d="M131.675 101.901V118.899H76.0957V29.0259H131.056V46.0238H93.84V65.1544H127.836V81.8536H93.84V102.072H131.653V101.923L131.675 101.901Z" fill="#191919"/>
+<path d="M139.502 74.0496C139.502 47.7104 158.952 27.3428 186.209 27.3428C213.465 27.3428 217.133 35.6178 224.79 48.4781L209.477 57.3503C205.19 49.3952 196.467 44.4899 186.059 44.4899C168.443 44.4899 156.969 56.7318 156.969 74.0496C156.969 91.3674 168.443 103.439 186.059 103.439C203.676 103.439 205.19 98.5334 209.477 90.7276L224.79 99.5997C217.283 112.46 202.737 120.735 186.209 120.735C158.952 120.735 139.502 100.218 139.502 74.0283V74.0496Z" fill="#191919"/>
+<path d="M304.406 29.0259V118.899H286.789V81.683H253.412V118.899H235.646V29.0259H253.412V64.7065H286.789V29.0259H304.406Z" fill="#191919"/>
+<path d="M370.859 46.0238V67.3084H405.772V84.3063H370.859V118.921H353.094V29.0259H406.839V46.0238H370.859Z" fill="#191919"/>
+<path d="M415.713 74.0496C415.713 47.7104 436.379 27.3428 462.27 27.3428C488.162 27.3428 508.977 47.7104 508.977 74.0496C508.977 100.389 488.162 120.756 462.27 120.756C436.379 120.756 415.713 100.24 415.713 74.0496ZM491.361 74.0496C491.361 56.7532 478.65 44.4899 462.42 44.4899C446.19 44.4899 433.479 56.7318 433.479 74.0496C433.479 91.3674 446.19 103.439 462.42 103.439C478.65 103.439 491.361 91.1968 491.361 74.0496Z" fill="#191919"/>
+<path d="M552.762 87.676H539.283V118.921H521.518V29.0259H557.497C574.025 29.0259 587.355 42.3555 587.355 58.8841C587.355 75.4128 580.317 80.3181 570.059 85.0741L589.957 119.07H570.826L552.762 87.8253V87.676ZM539.283 72.1924H557.497C564.236 72.1924 569.739 66.2207 569.739 58.8628C569.739 51.5049 564.236 45.5332 557.497 45.5332H539.283V72.171V72.1924Z" fill="#191919"/>
+<path d="M750.593 118.899H732.976V60.569L707.704 102.371H705.72L680.447 60.7183V118.899H662.682V29.0259H680.895L706.616 71.4459L732.337 29.0259H750.55V118.899H750.593Z" fill="#191919"/>
+<path d="M831.446 59.1827C831.446 76.0313 818.117 89.3395 800.671 89.3395H784.91V118.899H767.145V29.0259H800.671C817.968 29.0259 831.446 42.3555 831.446 59.1827ZM813.83 59.1827C813.83 51.3769 808.328 45.5546 800.82 45.5546H785.059V72.8109H800.82C808.328 72.8109 813.83 66.8392 813.83 59.1827Z" fill="#191919"/>
+<path d="M886.405 102.818H850.576L845.222 118.899H826.092L857.486 29.0259H879.538L911.081 118.899H891.78L886.427 102.818H886.405ZM880.903 86.2897L868.491 49.5428L856.078 86.2897H880.882H880.903Z" fill="#191919"/>
+<path d="M912.297 74.0496C912.297 47.7104 931.747 27.3428 959.004 27.3428C986.26 27.3428 989.928 35.6178 997.585 48.4781L982.272 57.3503C977.985 49.3952 969.262 44.4899 958.854 44.4899C941.238 44.4899 929.764 56.7318 929.764 74.0496C929.764 91.3674 941.238 103.439 958.854 103.439C976.471 103.439 977.985 98.5334 982.272 90.7276L997.585 99.5997C990.078 112.46 975.532 120.735 959.004 120.735C931.747 120.735 912.297 100.218 912.297 74.0283V74.0496Z" fill="#191919"/>
+<path d="M1067.71 46.0238H1043.35V118.899H1025.59V46.0238H1001.4V29.0259H1067.56V46.0238H1067.71Z" fill="#191919"/>
+<path d="M636.983 120.437C643.424 120.437 648.627 115.234 648.627 108.793C648.627 102.352 643.424 97.1479 636.983 97.1479C630.542 97.1479 625.338 102.352 625.338 108.793C625.338 115.234 630.542 120.437 636.983 120.437Z" fill="#191919"/>
+<path d="M636.983 85.3756C639.585 85.3756 642.037 85.8448 644.34 86.5913L650.461 28.8582C646.025 28.0905 641.589 27.6426 636.833 27.6426C632.077 27.6426 627.641 28.1118 623.205 28.8582L629.326 86.5913C631.629 85.8235 634.231 85.3756 636.684 85.3756H636.983Z" fill="#191919"/>
+</g>
+<defs>
+<clipPath id="clip0_124_554">
+<rect width="1692.13" height="148.182" fill="white"/>
+</clipPath>
+</defs>
+</svg>
+      <span class="term">2026 가을학기</span>
+    </div>
+    <h1>멘토 신청 현황</h1>
+    <div class="updated" id="updated">데이터 불러오는 중…</div>
+  </header>
+
+  <nav class="pageTabs rise" style="animation-delay:.04s">
+    <button class="pTab on" data-page="home">신청 현황</button>
+    <button class="pTab" data-page="school">학교별 현황</button>
+  </nav>
+
+  <div id="page-home">
+    <section class="card hero rise" style="animation-delay:.06s">
+      <div class="heroL">
+        <div class="statLabel">목표 달성 현황</div>
+        <div class="goalRow">
+          <span class="bigNum" id="mentorCount">0</span>
+          <span class="of">/ 60명</span>
+          <span class="pct" id="pct">0%</span>
+        </div>
+      </div>
+      <div class="heroR">
+        <div class="meter"><i id="meterFill"></i></div>
+        <div class="subStats">
+          <span class="chip">신청서 <b id="appCount">0</b>건</span>
+          <span class="chip">🔁 재참여 <b id="reCount">0</b>명</span>
+          <span class="chip">✨ 신규 <b id="newCount">0</b>명</span>
+          <span class="chip">목표 <b>60</b>명</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div class="col">
+        <section class="card rise" style="animation-delay:.12s">
+          <div class="cardTitle">직군별 신청</div>
+          <div class="cardSub">해당하는 직군 응답 기준</div>
+          <div class="barRows" id="jobBars"></div>
+        </section>
+        <section class="card rise" style="animation-delay:.16s">
+          <div class="cardTitle">소속 공동체별</div>
+          <div class="cardSub">크루가 소속된 공동체 기준</div>
+          <div class="barRows" id="coBars"></div>
+        </section>
+      </div>
+      <div class="col">
+        <div class="listHead rise" style="animation-delay:.18s">
+          <h2>신청 크루</h2>
+          <span class="count" id="listCount"></span>
+          <button class="reset" id="resetBtn">필터 초기화</button>
+        </div>
+        <div class="kwRow rise" id="jobRow" style="animation-delay:.22s"></div>
+        <div class="kwRow rise" id="expRow" style="animation-delay:.24s"></div>
+        <div class="pList" id="pList"></div>
+      </div>
+    </div>
+  </div><!-- /page-home -->
+
+  <div id="page-school" style="display:none">
+    <div class="schoolGrid" id="schoolGrid"></div>
+  </div>
+
+  <footer>카카오임팩트 · 테크포임팩트 캠퍼스 — 내부 운영용 대시보드 · <a href="./index.html" style="color:inherit">사회혁신가 현황 →</a></footer>
+</div>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   설정: 멘토 신청서 시트의 Apps Script 웹앱 배포 URL을 붙여넣으면
+   페이지를 열 때마다 시트 최신 데이터를 자동으로 불러와요.
+   (mentor-apps-script.gs 파일의 설치 방법 참고)
+   비어 있으면 아래 SNAPSHOT(마지막 저장본)을 보여줍니다.
+═══════════════════════════════════════════════════════════════ */
+const DATA_URL = "";
+
+const GOAL = 60;
+
+/* ── 26-2 참여 대학 (12개교) ── */
+const SCHOOLS = [
+  { name: '가천대학교',            short: '가천대',      region: '경기 성남', keys: ['가천'] },
+  { name: '경운대학교',            short: '경운대',      region: '경북 구미', keys: ['경운'] },
+  { name: '고려대학교 세종캠퍼스',  short: '고려대(세종)', region: '세종',     keys: ['고려'] },
+  { name: '동국대학교',            short: '동국대',      region: '서울',     keys: ['동국'] },
+  { name: '부산외국어대학교',      short: '부산외대',    region: '부산',     keys: ['부산외'] },
+  { name: '서울대학교',            short: '서울대',      region: '서울',     keys: ['서울대학교', '서울대'] },
+  { name: '서울시립대학교',        short: '시립대',      region: '서울',     keys: ['시립'] },
+  { name: '서울여자대학교',        short: '서울여대',    region: '서울',     keys: ['서울여자', '서울여대'] },
+  { name: '한라대학교',            short: '한라대',      region: '강원 원주', keys: ['한라'] },
+  { name: '광주과학기술원 GIST',   short: 'GIST',        region: '광주',     keys: ['GIST', '지스트', '광주과학'] },
+  { name: '한국과학기술원 KAIST',  short: 'KAIST',       region: '대전',     keys: ['KAIST', '카이스트', '한국과학'] },
+  { name: '울산과학기술원 UNIST',  short: 'UNIST',       region: '울산',     keys: ['UNIST', '유니스트', '울산과학'] }
+];
+const ANY_SCHOOL = '학교 무관';
+
+/* ── 직군 색상 ── */
+const JOB_COLORS = { '개발': 'var(--dev)', '기획': 'var(--plan)', '디자인': 'var(--design)', '데이터': 'var(--data)' };
+const jobColor = j => JOB_COLORS[j] || 'var(--etc)';
+
+/* 폴백: 시트 연동이 실패했을 때 빈 화면 대신 안내를 띄우기 위한 빈 데이터
+   (공개 레포라 소스에는 신청 데이터를 넣지 않아요 — README '개인정보 주의' 참고) */
+const SNAPSHOT = { updatedAt: "", rows: [] };
+
+let PEOPLE = [];
+let jobFilter = null;
+let expFilter = null;
+
+function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ── 희망 학교 파싱: "[지역] 학교명" / 접두어 없는 옛 응답 / "특별히 없음" 모두 처리 ── */
+function parseSchools(raw){
+  const s = String(raw || '').trim();
+  if (!s) return { any: true, list: [] };
+  if (/없음|매칭에 따름|무관/.test(s)) return { any: true, list: [] };
+  const items = s.split(',').map(x => x.replace(/\[[^\]]*\]/g, '').trim()).filter(Boolean);
+  const found = [];
+  items.forEach(item => {
+    const sc = SCHOOLS.find(u => u.keys.some(k => item.includes(k)));
+    if (sc && !found.includes(sc.name)) found.push(sc.name);
+  });
+  return { any: found.length === 0, list: found };
+}
+
+function prep(rows){
+  return rows.map((r, i) => {
+    const sch = parseSchools(r.schools);
+    return { ...r, idx: i, schoolList: sch.list, anySchool: sch.any,
+             isRe: String(r.exp || '').includes('예') };
+  }).filter(r => r.name);
+}
+
+function countUp(el, target, suffix = '', dur = 900){
+  const t0 = performance.now();
+  function tick(t){
+    const p = Math.min((t - t0) / dur, 1);
+    el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))) + suffix;
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ── 히어로 ── */
+function renderHero(){
+  const n = PEOPLE.length;
+  const re = PEOPLE.filter(p => p.isRe).length;
+  countUp(document.getElementById('mentorCount'), n);
+  countUp(document.getElementById('appCount'), n);
+  countUp(document.getElementById('reCount'), re);
+  countUp(document.getElementById('newCount'), n - re);
+  const pct = Math.min(Math.round(n / GOAL * 100), 100);
+  countUp(document.getElementById('pct'), pct, '%');
+  requestAnimationFrame(() => {
+    document.getElementById('meterFill').style.width = pct + '%';
+  });
+}
+
+/* ── 바 차트 (직군 · 소속) ── */
+function tally(getKey){
+  const m = new Map();
+  PEOPLE.forEach(p => {
+    const k = getKey(p) || '기타';
+    m.set(k, (m.get(k) || 0) + 1);
+  });
+  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+}
+function renderBars(elId, entries, colorOf){
+  const max = Math.max(...entries.map(e => e[1]), 1);
+  document.getElementById(elId).innerHTML = entries.map(([k, n], i) => `
+    <div class="barRow" style="--bc:${colorOf ? colorOf(k) : 'var(--acc)'}">
+      <span class="lb"><i></i>${esc(k)}</span>
+      <span class="tr"><i style="transition-delay:${i * .06}s" data-w="${n / max * 100}"></i></span>
+      <span class="n">${n}</span>
+    </div>`).join('');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll(`#${elId} .tr i`).forEach(el => el.style.width = el.dataset.w + '%');
+  }));
+}
+
+/* ── 신청 크루 리스트 ── */
+function renderFilters(){
+  const jobs = tally(p => p.job);
+  const jr = document.getElementById('jobRow');
+  jr.innerHTML =
+    `<button class="kw ${!jobFilter ? 'on' : ''}" data-j="">전체<span class="n">${PEOPLE.length}</span></button>` +
+    jobs.map(([j, n]) =>
+      `<button class="kw ${jobFilter === j ? 'on' : ''}" data-j="${esc(j)}">${esc(j)}<span class="n">${n}</span></button>`).join('');
+  jr.querySelectorAll('[data-j]').forEach(b =>
+    b.addEventListener('click', () => { jobFilter = b.dataset.j || null; renderFilters(); renderList(); }));
+
+  const er = document.getElementById('expRow');
+  const re = PEOPLE.filter(p => p.isRe).length;
+  er.innerHTML = [
+    ['', '경험 전체', PEOPLE.length],
+    ['re', '🔁 재참여', re],
+    ['new', '✨ 신규', PEOPLE.length - re]
+  ].map(([v, label, n]) =>
+    `<button class="kw ${(expFilter || '') === v ? 'on' : ''}" data-e="${v}">${label}<span class="n">${n}</span></button>`).join('');
+  er.querySelectorAll('[data-e]').forEach(b =>
+    b.addEventListener('click', () => { expFilter = b.dataset.e || null; renderFilters(); renderList(); }));
+}
+
+function renderList(){
+  const list = document.getElementById('pList');
+  const reset = document.getElementById('resetBtn');
+  let ppl = [...PEOPLE].sort((a, b) => b.ts.localeCompare(a.ts));
+  if (jobFilter) ppl = ppl.filter(p => (p.job || '기타') === jobFilter);
+  if (expFilter) ppl = ppl.filter(p => expFilter === 're' ? p.isRe : !p.isRe);
+
+  const filters = [jobFilter, expFilter && (expFilter === 're' ? '재참여' : '신규')].filter(Boolean);
+  reset.classList.toggle('on', filters.length > 0);
+  document.getElementById('listCount').textContent =
+    (filters.length ? filters.join(' · ') + ' ' : '') + ppl.length + '명';
+
+  if (!ppl.length) {
+    list.innerHTML = '<div class="empty">조건에 맞는 크루가 아직 없어요.</div>';
+    return;
+  }
+  list.innerHTML = ppl.map((p, i) => `
+    <div class="p" style="animation-delay:${Math.min(i * 0.05, 0.6)}s" data-idx="${p.idx}">
+      <div class="over"><span>${esc(p.company)}</span><span>·</span><span>${esc(p.dept)}</span><span>·</span><span>${esc(p.ts.slice(5))} 신청</span></div>
+      <div class="name">${esc(p.name)}
+        <span class="jChip" style="--jc:${jobColor(p.job)}">${esc(p.job || '기타')}</span>
+        ${p.isRe ? '<span class="rChip">🔁 재참여</span>' : ''}
+      </div>
+      <div class="schools">${
+        p.anySchool
+          ? '<span>🏫 학교 무관 (매칭에 따름)</span>'
+          : p.schoolList.map(s => {
+              const u = SCHOOLS.find(x => x.name === s);
+              return `<span>🏫 ${esc(u ? u.short : s)}</span>`;
+            }).join('')
+      }</div>
+      <span class="arrow">›</span>
+    </div>`).join('');
+  list.querySelectorAll('.p').forEach(card =>
+    card.addEventListener('click', () => openPerson(Number(card.dataset.idx))));
+}
+
+/* ── 학교별 페이지 ── */
+function renderSchoolPage(){
+  const grid = document.getElementById('schoolGrid');
+  if (!grid) return;
+  const bySchool = SCHOOLS.map(u => ({
+    ...u,
+    people: PEOPLE.filter(p => p.schoolList.includes(u.name))
+  })).sort((a, b) => b.people.length - a.people.length);
+  const anyPpl = PEOPLE.filter(p => p.anySchool);
+  const max = Math.max(...bySchool.map(s => s.people.length), 1);
+
+  const jobSummary = ppl => {
+    const m = new Map();
+    ppl.forEach(p => { const j = p.job || '기타'; m.set(j, (m.get(j) || 0) + 1); });
+    return [...m.entries()].sort((a, b) => b[1] - a[1])
+      .map(([j, n]) => `<span class="jChip" style="--jc:${jobColor(j)}">${esc(j)} ${n}</span>`).join('');
+  };
+  const li = p => `
+    <li data-idx="${p.idx}">
+      <span class="jDot" style="--jc:${jobColor(p.job)}"></span>
+      <span class="nm">${esc(p.name)} <span style="color:var(--muted);font-weight:600">· ${esc(p.company)}</span></span>
+      <span class="tg ${p.isRe ? 're' : ''}">${p.isRe ? '🔁 재참여' : '✨ 신규'}</span>
+    </li>`;
+
+  grid.innerHTML =
+    `<div class="sNote card">🏫 크루가 <b>멘토링을 희망한 학교</b> 기준이에요 (복수 선택 가능 · 실제 매칭과는 달라질 수 있어요).
+      학교를 고르지 않은 크루는 맨 아래 <b>학교 무관</b> 카드에 모여 있어요.</div>` +
+    bySchool.map((u, ci) => `
+      <section class="card sCard rise" style="animation-delay:${ci * .04}s">
+        <div class="sHead"><h3>${esc(u.short)}</h3><span class="rg">📍 ${esc(u.region)}</span>
+          <span class="sCount ${u.people.length ? '' : 'zero'}">${u.people.length}명</span></div>
+        <div class="sBar"><i data-w="${u.people.length / max * 100}"></i></div>
+        ${u.people.length
+          ? `<div class="sJobs">${jobSummary(u.people)}</div>
+             <ul class="sList">${u.people.map(li).join('')}</ul>`
+          : '<div class="none">아직 희망한 크루가 없어요.</div>'}
+      </section>`).join('') +
+    `<section class="card sCard rise" style="animation-delay:${bySchool.length * .04}s">
+      <div class="sHead"><h3>학교 무관</h3><span class="rg">🤝 매칭에 따름</span>
+        <span class="sCount ${anyPpl.length ? '' : 'zero'}">${anyPpl.length}명</span></div>
+      <div class="sBar"><i data-w="${anyPpl.length / max * 100}"></i></div>
+      ${anyPpl.length
+        ? `<div class="sJobs">${jobSummary(anyPpl)}</div>
+           <ul class="sList">${anyPpl.map(li).join('')}</ul>`
+        : '<div class="none">해당 크루가 없어요.</div>'}
+    </section>`;
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    grid.querySelectorAll('.sBar i').forEach(el => el.style.width = el.dataset.w + '%');
+  }));
+  grid.querySelectorAll('li[data-idx]').forEach(el =>
+    el.addEventListener('click', () => openPerson(Number(el.dataset.idx))));
+}
+
+/* ── 페이지 탭 ── */
+function switchPage(p){
+  document.getElementById('page-home').style.display = p === 'home' ? '' : 'none';
+  document.getElementById('page-school').style.display = p === 'school' ? '' : 'none';
+  document.querySelectorAll('.pTab').forEach(b => b.classList.toggle('on', b.dataset.page === p));
+  if (p === 'school') renderSchoolPage();
+}
+document.querySelectorAll('.pTab').forEach(b =>
+  b.addEventListener('click', () => switchPage(b.dataset.page)));
+
+/* ── 상세 모달 ── */
+const overlay = document.getElementById('overlay');
+function openPerson(idx){
+  const p = PEOPLE.find(x => x.idx === idx);
+  if (!p) return;
+  const modal = document.getElementById('modal');
+  const schoolChips = p.anySchool
+    ? '<span class="gray">🏫 학교 무관 (매칭에 따름)</span>'
+    : p.schoolList.map(s => `<span>🏫 ${esc(s)}</span>`).join('');
+  modal.innerHTML = `
+    <button class="mClose" aria-label="닫기">✕</button>
+    <div class="mOver"><span>${esc(p.ts)} 신청</span></div>
+    <div class="mTitle">${esc(p.name)}
+      <span class="jChip" style="--jc:${jobColor(p.job)};font-size:13px;padding:5px 13px">${esc(p.job || '기타')}</span>
+      ${p.isRe ? '<span class="rChip" style="font-size:13px;padding:5px 13px">🔁 재참여</span>' : ''}
+    </div>
+    <div class="mChips">${schoolChips}</div>
+    <div class="mGrid">
+      <div class="mRow"><span class="k">LDAP</span><span class="v">${esc(p.ldap)}</span></div>
+      <div class="mRow"><span class="k">소속</span><span class="v">${esc(p.company)} · ${esc(p.dept)}</span></div>
+      <div class="mRow"><span class="k">멘토 참여 경험</span><span class="v">${p.isRe ? '있음 (재참여)' : '처음 (신규)'}</span></div>
+      ${p.referral ? `<div class="mRow"><span class="k">추천 크루</span><span class="v">${esc(p.referral)}</span></div>` : ''}
+    </div>
+    ${p.motive ? `<div class="mSec"><h3>지원 동기 · 기대하는 점</h3><p>${esc(p.motive)}</p></div>` : ''}
+    ${p.work ? `<div class="mSec"><h3>현재 맡고 있는 업무</h3><p>${esc(p.work)}</p></div>` : ''}
+    ${p.coach ? `<div class="mSec"><h3>코칭 가능한 전문 분야</h3><p>${esc(p.coach)}</p></div>` : ''}
+    ${p.mentorExp ? `<div class="mSec"><h3>멘토링 경험</h3><p>${esc(p.mentorExp)}</p></div>` : ''}`;
+  modal.querySelector('.mClose').addEventListener('click', closeModal);
+  overlay.classList.add('vis');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(){
+  overlay.classList.remove('vis');
+  document.body.style.overflow = '';
+}
+overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  jobFilter = null; expFilter = null;
+  renderFilters(); renderList();
+});
+
+/* ── 데이터 로드 ── */
+function renderAll(data){
+  PEOPLE = prep(data.rows);
+  document.getElementById('updated').textContent =
+    (!DATA_URL && !PEOPLE.length)
+      ? '아직 시트 연동 전이에요 — mentor-apps-script.gs를 멘토 응답 시트에 설치하고, 배포 URL을 mentor.html의 DATA_URL에 붙여넣어 주세요.'
+      : `기준: ${data.updatedAt}` + (DATA_URL ? ' · 시트 자동 연동' : ' · 수동 저장본');
+  renderHero();
+  renderBars('jobBars', tally(p => p.job), jobColor);
+  renderBars('coBars', tally(p => p.company));
+  renderFilters();
+  renderList();
+  if (document.getElementById('page-school').style.display !== 'none') renderSchoolPage();
+}
+
+async function load(){
+  if (DATA_URL) {
+    try {
+      const res = await fetch(DATA_URL);
+      const data = await res.json();
+      renderAll(data);
+      return;
+    } catch (err) {
+      console.warn('시트 연동 실패, 저장본 표시', err);
+    }
+  }
+  renderAll(SNAPSHOT);
+}
+
+/* ── 비밀번호 게이트 (index.html과 동일 · 한 번 입력하면 둘 다 열려요) ── */
+const GATE_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+async function sha256(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function unlock(){
+  document.body.classList.remove('locked');
+  load();
+}
+async function tryGate(){
+  const pw = document.getElementById('gatePw').value;
+  if (!pw) return;
+  if (await sha256(pw) === GATE_HASH) {
+    sessionStorage.setItem('tfi_gate', '1');
+    unlock();
+  } else {
+    document.getElementById('gateErr').textContent = '비밀번호가 맞지 않아요';
+    document.getElementById('gatePw').value = '';
+  }
+}
+document.getElementById('gateBtn').addEventListener('click', tryGate);
+document.getElementById('gatePw').addEventListener('keydown', e => { if (e.key === 'Enter') tryGate(); });
+if (sessionStorage.getItem('tfi_gate') === '1') unlock();
+else document.getElementById('gatePw').focus();
+</script>
+</body>
+</html>
