@@ -108,7 +108,130 @@
   }
   .chip b { font-weight: 800; color: var(--ink); }
 
-  /* ── 페이지 탭 ── */
+  
+/* ── 배정 보드 ── */
+function renderBoard(){
+  const grid = document.getElementById('boardGrid');
+  if (!grid) return;
+  document.getElementById('boardNote').style.display = SAVE_OK ? 'none' : '';
+  document.getElementById('autoBtn').disabled = !SAVE_OK;
+
+  const byLdap = {};
+  PEOPLE.forEach(p => byLdap[p.ldap] = p);
+  const pool = PEOPLE.filter(p => !ASSIGN[p.ldap]);
+
+  const chip = (p, schoolName) => {
+    const mark = schoolName ? (p.anySchool ? '🤝' : (p.schoolList.includes(schoolName) ? '' : '⚠️')) : '';
+    const wish = p.anySchool ? '학교 무관' : p.schoolList.map(shortName).join(', ');
+    return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''}" data-ldap="${esc(p.ldap)}"
+      title="${esc(shortCo(p.company))} · ${esc(jobKey(p.job))} · 희망: ${esc(wish)}">
+      <span class="jDot" style="--jc:${jobColor(jobKey(p.job))}"></span>
+      <span class="nm2">${esc(p.name)}<span class="ld">(${esc(p.ldap)})</span></span>
+      ${p.isRe ? '<span class="mk">🔁</span>' : ''}${mark ? `<span class="mk">${mark}</span>` : ''}
+    </div>`;
+  };
+  const jobsSummary = ppl => {
+    const m = new Map();
+    ppl.forEach(p => { const k = jobKey(p.job); m.set(k, (m.get(k) || 0) + 1); });
+    return [...m.entries()].sort((a, b) => b[1] - a[1])
+      .map(([j, n]) => `<span class="jChip" style="--jc:${jobColor(j)}">${esc(j)} ${n}</span>`).join('');
+  };
+
+  grid.innerHTML =
+    `<section class="bCard pool ${SEL ? 'droptarget' : ''}" data-school="">
+      <div class="bHead"><h3>🗂 미배정</h3><span class="bCnt">${pool.length}명</span></div>
+      <div class="bChips">${pool.map(p => chip(p, '')).join('') || '<span class="noneB">모두 배정됐어요 🎉</span>'}</div>
+    </section>` +
+    SCHOOLS.map(u => {
+      const ppl = PEOPLE.filter(p => ASSIGN[p.ldap] === u.name);
+      const g = goalOf(u);
+      const cls = ppl.length > g.max ? 'over' : (ppl.length >= g.min ? 'ok' : '');
+      return `<section class="bCard ${SEL ? 'droptarget' : ''}" data-school="${esc(u.name)}">
+        <div class="bHead"><h3>${esc(u.short)}</h3><span class="bCnt ${cls}">${ppl.length}<span style="font-weight:600;color:var(--muted)">/${g.label}</span></span></div>
+        ${ppl.length ? `<div class="bJobs">${jobsSummary(ppl)}</div>` : ''}
+        <div class="bChips">${ppl.map(p => chip(p, u.name)).join('') || '<span class="noneB">비어 있어요</span>'}</div>
+      </section>`;
+    }).join('');
+
+  document.getElementById('boardHint').textContent = SEL
+    ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
+    : '칩을 클릭해 선택 → 이동할 대학 카드를 클릭하면 옮겨져요 · ⚠️=희망하지 않은 대학 · 🤝=학교 무관 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
+
+  grid.querySelectorAll('.chipM').forEach(el =>
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      if (!SAVE_OK) return;
+      SEL = SEL === el.dataset.ldap ? null : el.dataset.ldap;
+      renderBoard();
+    }));
+  grid.querySelectorAll('.bCard').forEach(card =>
+    card.addEventListener('click', () => { if (SEL) moveTo(SEL, card.dataset.school); }));
+}
+
+function moveTo(ldap, school){
+  const p = PEOPLE.find(x => x.ldap === ldap);
+  const prev = ASSIGN[ldap] || '';
+  const next = school || '';
+  SEL = null;
+  if (prev === next) { renderBoard(); return; }
+  if (next) ASSIGN[ldap] = next; else delete ASSIGN[ldap];
+  renderBoard();
+  saveAssign(ldap, p ? p.name : '', next, prev);
+}
+
+/* 저장은 백그라운드로 — 화면 즉시 반영, 같은 사람 요청은 순서 보장 */
+const assignChain = {};
+function saveAssign(ldap, name, school, prevSchool){
+  assignChain[ldap] = (assignChain[ldap] || Promise.resolve())
+    .then(() => fetch(DATA_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'assign', ldap, name, school })
+    }))
+    .then(res => res.json())
+    .then(out => { if (!out.ok) throw new Error(out.error || 'save failed'); })
+    .catch(err => {
+      console.warn('배정 저장 실패', err);
+      const cur = ASSIGN[ldap] || '';
+      if (cur === school) { /* 그 사이 또 옮기지 않았다면 되돌리기 */
+        if (prevSchool) ASSIGN[ldap] = prevSchool; else delete ASSIGN[ldap];
+        renderBoard();
+      }
+      alert(`${name}님 배정 저장에 실패했어요. 다시 옮겨 주세요.`);
+    });
+}
+
+/* 자동 배정: 희망 대학 우선 · 정원 내 · 직군이 부족한 곳부터 */
+document.getElementById('autoBtn').addEventListener('click', () => {
+  const pool = PEOPLE.filter(p => !ASSIGN[p.ldap]).sort((a, b) => a.ts.localeCompare(b.ts));
+  if (!pool.length) { alert('미배정 크루가 없어요!'); return; }
+  if (!confirm(`미배정 ${pool.length}명을 자동 배정할까요?\n\n· 희망 대학 우선 (다 찼으면 다른 대학 ⚠️)\n· 대학별 목표 6~7명 (GIST·UNIST 5명)\n· 직군이 부족한 대학부터 채움\n\n배정 후 칩을 옮겨서 자유롭게 조정하면 돼요.`)) return;
+
+  const count = {}, jobs = {};
+  SCHOOLS.forEach(u => { count[u.name] = 0; jobs[u.name] = {}; });
+  PEOPLE.forEach(p => {
+    const s = ASSIGN[p.ldap];
+    if (s && count[s] !== undefined) { count[s]++; const k = jobKey(p.job); jobs[s][k] = (jobs[s][k] || 0) + 1; }
+  });
+
+  pool.forEach(p => {
+    const jk = jobKey(p.job);
+    let cands = (p.anySchool ? SCHOOLS : SCHOOLS.filter(u => p.schoolList.includes(u.name)))
+      .filter(u => count[u.name] < goalOf(u).max);
+    if (!cands.length) cands = SCHOOLS.filter(u => count[u.name] < goalOf(u).max);
+    if (!cands.length) return; /* 전 대학 만석 → 미배정 유지 */
+    cands.sort((a, b) =>
+      ((jobs[a.name][jk] || 0) - (jobs[b.name][jk] || 0)) ||
+      ((count[a.name] / goalOf(a).max) - (count[b.name] / goalOf(b).max)) ||
+      (count[a.name] - count[b.name]));
+    const pick = cands[0];
+    ASSIGN[p.ldap] = pick.name;
+    count[pick.name]++; jobs[pick.name][jk] = (jobs[pick.name][jk] || 0) + 1;
+    saveAssign(p.ldap, p.name, pick.name, '');
+  });
+  renderBoard();
+});
+
+/* ── 페이지 탭 ── */
   .pageTabs { display: flex; gap: 8px; margin: 20px 0 24px; flex-wrap: wrap; }
   .pTab {
     font-family: 'KakaoBigSans', Pretendard, sans-serif;
@@ -269,6 +392,44 @@
   .mSec h3::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--acc); }
   .mSec p { font-size: 14.5px; line-height: 1.75; color: var(--body); white-space: pre-line; }
 
+  /* ── 배정 보드 ── */
+  .boardBar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .boardBar .cardSub { margin-bottom: 0; }
+  .btnAuto {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    background: var(--ink); color: #fff; border: none; border-radius: 999px;
+    padding: 12px 20px; font-weight: 800; font-size: 14px; cursor: pointer;
+    transition: transform .15s, opacity .2s; flex: 0 0 auto;
+  }
+  .btnAuto:hover { transform: translateY(-1px); }
+  .btnAuto:disabled { opacity: .35; cursor: default; transform: none; }
+  #boardNote { background: var(--acc-faint); font-size: 13.5px; font-weight: 600; color: var(--body); padding: 14px 20px; margin-bottom: 18px; }
+  .boardGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 16px; align-items: start; }
+  .bCard { background: var(--card); border-radius: 20px; padding: 16px 16px 14px; outline: 2px solid transparent; transition: outline-color .15s, background .15s; }
+  .bCard.pool { grid-column: 1 / -1; }
+  .bCard.pool .bChips { flex-direction: row; flex-wrap: wrap; }
+  .bCard.droptarget { outline: 2px dashed var(--acc-text); cursor: pointer; }
+  .bCard.droptarget:hover { background: var(--acc-faint); }
+  .bCard .bHead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+  .bCard h3 { font-family: 'KakaoBigSans', Pretendard, sans-serif; font-size: 15.5px; font-weight: 800; }
+  .bCard .bCnt { margin-left: auto; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .bCnt.ok { color: #0FA36B; } .bCnt.over { color: #D93025; }
+  .bJobs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 9px; }
+  .bChips { display: flex; flex-direction: column; gap: 6px; }
+  .chipM {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--white); border-radius: 12px; padding: 8px 11px;
+    font-size: 12.5px; font-weight: 700; cursor: pointer;
+    border: 2px solid transparent; transition: border-color .15s, transform .12s;
+  }
+  .chipM:hover { transform: translateY(-1px); }
+  .chipM.sel { border-color: var(--ink); }
+  .chipM .jDot { width: 8px; height: 8px; border-radius: 50%; background: var(--jc, var(--etc)); flex: 0 0 auto; }
+  .chipM .nm2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chipM .mk { flex: 0 0 auto; font-size: 11px; margin-left: auto; }
+  .chipM .mk + .mk { margin-left: 0; }
+  .noneB { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+
   footer { margin-top: 48px; text-align: center; font-size: 12.5px; color: var(--muted); }
   .sheetBtn {
     display: inline-block; margin-top: 12px;
@@ -362,6 +523,7 @@
   <nav class="pageTabs rise" style="animation-delay:.04s">
     <button class="pTab on" data-page="home">신청 현황</button>
     <button class="pTab" data-page="school">멘토 희망 대학</button>
+    <button class="pTab" data-page="board">배정 보드</button>
   </nav>
 
   <div id="page-home">
@@ -415,6 +577,18 @@
     <div class="schoolGrid" id="schoolGrid"></div>
   </div>
 
+  <div id="page-board" style="display:none">
+    <div class="boardBar rise">
+      <div>
+        <div class="cardTitle">배정 보드</div>
+        <div class="cardSub" id="boardHint"></div>
+      </div>
+      <button class="btnAuto" id="autoBtn">🎲 미배정 자동 배정</button>
+    </div>
+    <div class="card" id="boardNote" style="display:none">⚠️ 배정 저장을 켜려면 <b>mentor-apps-script.gs 새 버전 배포</b>가 필요해요 — 멘토 시트 → Apps Script → 코드 교체 → 배포 관리 → ✏️ → 버전 "새 버전" → 배포 (URL은 그대로예요)</div>
+    <div class="boardGrid" id="boardGrid"></div>
+  </div><!-- /page-board -->
+
   <footer>카카오임팩트 · 테크포임팩트 캠퍼스 — 내부 운영용 대시보드<br/>
   <a class="sheetBtn" href="https://docs.google.com/spreadsheets/d/14GF-Du7sDDciiUCKJcsazNzy1ae8nf1MRrzgsfIJYuk/edit?resourcekey=&gid=679275159#gid=679275159" target="_blank" rel="noopener">📄 멘토 신청서 응답 시트 열기 →</a></footer>
 </div>
@@ -463,6 +637,24 @@ let PEOPLE = [];
 let jobFilter = null;
 let expFilter = null;
 
+/* ── 배정 보드 상태 ── */
+let ASSIGN = {};      // ldap → 배정 대학(전체 이름)
+let SAVE_OK = false;  // Apps Script가 assignments를 내려주면 저장 가능
+let SEL = null;       // 이동하려고 선택한 칩의 ldap
+
+const jobKey = j => {
+  j = String(j || '');
+  if (j.includes('개발')) return '개발';
+  if (j.includes('기획')) return '기획';
+  if (j.includes('디자')) return '디자인';
+  return '기타';
+};
+/* 대학별 배정 목표 — GIST·UNIST는 학생 25명이라 5명, 나머지는 6~7명 */
+const goalOf = u => (u.short === 'GIST' || u.short === 'UNIST')
+  ? { min: 5, max: 5, label: '5' }
+  : { min: 6, max: 7, label: '6~7' };
+const shortName = n => (SCHOOLS.find(u => u.name === n) || { short: n }).short;
+
 /* 공동체명 축약: '카카오'는 그대로, 나머지는 '카카오' 접두어 제거 (모빌리티, 엔터테인먼트 …) */
 function shortCo(c){
   c = String(c || '').trim();
@@ -484,12 +676,19 @@ function parseSchools(raw){
   return { any: found.length === 0, list: found };
 }
 
+let RAW_COUNT = 0; // 중복 포함 신청서 건수
+
 function prep(rows){
-  return rows.map((r, i) => {
+  const enriched = rows.map(r => {
     const sch = parseSchools(r.schools);
-    return { ...r, idx: i, schoolList: sch.list, anySchool: sch.any,
+    return { ...r, schoolList: sch.list, anySchool: sch.any,
              isRe: String(r.exp || '').includes('예') };
   }).filter(r => r.name);
+  RAW_COUNT = enriched.length;
+  /* 같은 LDAP 재제출은 최신 응답만 사용 (시트는 시간순이라 뒤 행이 최신) */
+  const m = new Map();
+  enriched.forEach(r => m.set(r.ldap || r.name + r.ts, r));
+  return [...m.values()].map((r, i) => ({ ...r, idx: i }));
 }
 
 function countUp(el, target, suffix = '', dur = 900){
@@ -507,7 +706,7 @@ function renderHero(){
   const n = PEOPLE.length;
   const re = PEOPLE.filter(p => p.isRe).length;
   countUp(document.getElementById('mentorCount'), n);
-  countUp(document.getElementById('appCount'), n);
+  countUp(document.getElementById('appCount'), RAW_COUNT);
   countUp(document.getElementById('reCount'), re);
   countUp(document.getElementById('newCount'), n - re);
   const pct = Math.min(Math.round(n / GOAL * 100), 100);
@@ -657,12 +856,137 @@ function renderSchoolPage(){
     el.addEventListener('click', () => openPerson(Number(el.dataset.idx))));
 }
 
+
+/* ── 배정 보드 ── */
+function renderBoard(){
+  const grid = document.getElementById('boardGrid');
+  if (!grid) return;
+  document.getElementById('boardNote').style.display = SAVE_OK ? 'none' : '';
+  document.getElementById('autoBtn').disabled = !SAVE_OK;
+
+  const byLdap = {};
+  PEOPLE.forEach(p => byLdap[p.ldap] = p);
+  const pool = PEOPLE.filter(p => !ASSIGN[p.ldap]);
+
+  const chip = (p, schoolName) => {
+    const mark = schoolName ? (p.anySchool ? '🤝' : (p.schoolList.includes(schoolName) ? '' : '⚠️')) : '';
+    const wish = p.anySchool ? '학교 무관' : p.schoolList.map(shortName).join(', ');
+    return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''}" data-ldap="${esc(p.ldap)}"
+      title="${esc(shortCo(p.company))} · ${esc(jobKey(p.job))} · 희망: ${esc(wish)}">
+      <span class="jDot" style="--jc:${jobColor(jobKey(p.job))}"></span>
+      <span class="nm2">${esc(p.name)}<span class="ld">(${esc(p.ldap)})</span></span>
+      ${p.isRe ? '<span class="mk">🔁</span>' : ''}${mark ? `<span class="mk">${mark}</span>` : ''}
+    </div>`;
+  };
+  const jobsSummary = ppl => {
+    const m = new Map();
+    ppl.forEach(p => { const k = jobKey(p.job); m.set(k, (m.get(k) || 0) + 1); });
+    return [...m.entries()].sort((a, b) => b[1] - a[1])
+      .map(([j, n]) => `<span class="jChip" style="--jc:${jobColor(j)}">${esc(j)} ${n}</span>`).join('');
+  };
+
+  grid.innerHTML =
+    `<section class="bCard pool ${SEL ? 'droptarget' : ''}" data-school="">
+      <div class="bHead"><h3>🗂 미배정</h3><span class="bCnt">${pool.length}명</span></div>
+      <div class="bChips">${pool.map(p => chip(p, '')).join('') || '<span class="noneB">모두 배정됐어요 🎉</span>'}</div>
+    </section>` +
+    SCHOOLS.map(u => {
+      const ppl = PEOPLE.filter(p => ASSIGN[p.ldap] === u.name);
+      const g = goalOf(u);
+      const cls = ppl.length > g.max ? 'over' : (ppl.length >= g.min ? 'ok' : '');
+      return `<section class="bCard ${SEL ? 'droptarget' : ''}" data-school="${esc(u.name)}">
+        <div class="bHead"><h3>${esc(u.short)}</h3><span class="bCnt ${cls}">${ppl.length}<span style="font-weight:600;color:var(--muted)">/${g.label}</span></span></div>
+        ${ppl.length ? `<div class="bJobs">${jobsSummary(ppl)}</div>` : ''}
+        <div class="bChips">${ppl.map(p => chip(p, u.name)).join('') || '<span class="noneB">비어 있어요</span>'}</div>
+      </section>`;
+    }).join('');
+
+  document.getElementById('boardHint').textContent = SEL
+    ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
+    : '칩을 클릭해 선택 → 이동할 대학 카드를 클릭하면 옮겨져요 · ⚠️=희망하지 않은 대학 · 🤝=학교 무관 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
+
+  grid.querySelectorAll('.chipM').forEach(el =>
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      if (!SAVE_OK) return;
+      SEL = SEL === el.dataset.ldap ? null : el.dataset.ldap;
+      renderBoard();
+    }));
+  grid.querySelectorAll('.bCard').forEach(card =>
+    card.addEventListener('click', () => { if (SEL) moveTo(SEL, card.dataset.school); }));
+}
+
+function moveTo(ldap, school){
+  const p = PEOPLE.find(x => x.ldap === ldap);
+  const prev = ASSIGN[ldap] || '';
+  const next = school || '';
+  SEL = null;
+  if (prev === next) { renderBoard(); return; }
+  if (next) ASSIGN[ldap] = next; else delete ASSIGN[ldap];
+  renderBoard();
+  saveAssign(ldap, p ? p.name : '', next, prev);
+}
+
+/* 저장은 백그라운드로 — 화면 즉시 반영, 같은 사람 요청은 순서 보장 */
+const assignChain = {};
+function saveAssign(ldap, name, school, prevSchool){
+  assignChain[ldap] = (assignChain[ldap] || Promise.resolve())
+    .then(() => fetch(DATA_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'assign', ldap, name, school })
+    }))
+    .then(res => res.json())
+    .then(out => { if (!out.ok) throw new Error(out.error || 'save failed'); })
+    .catch(err => {
+      console.warn('배정 저장 실패', err);
+      const cur = ASSIGN[ldap] || '';
+      if (cur === school) { /* 그 사이 또 옮기지 않았다면 되돌리기 */
+        if (prevSchool) ASSIGN[ldap] = prevSchool; else delete ASSIGN[ldap];
+        renderBoard();
+      }
+      alert(`${name}님 배정 저장에 실패했어요. 다시 옮겨 주세요.`);
+    });
+}
+
+/* 자동 배정: 희망 대학 우선 · 정원 내 · 직군이 부족한 곳부터 */
+document.getElementById('autoBtn').addEventListener('click', () => {
+  const pool = PEOPLE.filter(p => !ASSIGN[p.ldap]).sort((a, b) => a.ts.localeCompare(b.ts));
+  if (!pool.length) { alert('미배정 크루가 없어요!'); return; }
+  if (!confirm(`미배정 ${pool.length}명을 자동 배정할까요?\n\n· 희망 대학 우선 (다 찼으면 다른 대학 ⚠️)\n· 대학별 목표 6~7명 (GIST·UNIST 5명)\n· 직군이 부족한 대학부터 채움\n\n배정 후 칩을 옮겨서 자유롭게 조정하면 돼요.`)) return;
+
+  const count = {}, jobs = {};
+  SCHOOLS.forEach(u => { count[u.name] = 0; jobs[u.name] = {}; });
+  PEOPLE.forEach(p => {
+    const s = ASSIGN[p.ldap];
+    if (s && count[s] !== undefined) { count[s]++; const k = jobKey(p.job); jobs[s][k] = (jobs[s][k] || 0) + 1; }
+  });
+
+  pool.forEach(p => {
+    const jk = jobKey(p.job);
+    let cands = (p.anySchool ? SCHOOLS : SCHOOLS.filter(u => p.schoolList.includes(u.name)))
+      .filter(u => count[u.name] < goalOf(u).max);
+    if (!cands.length) cands = SCHOOLS.filter(u => count[u.name] < goalOf(u).max);
+    if (!cands.length) return; /* 전 대학 만석 → 미배정 유지 */
+    cands.sort((a, b) =>
+      ((jobs[a.name][jk] || 0) - (jobs[b.name][jk] || 0)) ||
+      ((count[a.name] / goalOf(a).max) - (count[b.name] / goalOf(b).max)) ||
+      (count[a.name] - count[b.name]));
+    const pick = cands[0];
+    ASSIGN[p.ldap] = pick.name;
+    count[pick.name]++; jobs[pick.name][jk] = (jobs[pick.name][jk] || 0) + 1;
+    saveAssign(p.ldap, p.name, pick.name, '');
+  });
+  renderBoard();
+});
+
 /* ── 페이지 탭 ── */
 function switchPage(p){
   document.getElementById('page-home').style.display = p === 'home' ? '' : 'none';
   document.getElementById('page-school').style.display = p === 'school' ? '' : 'none';
+  document.getElementById('page-board').style.display = p === 'board' ? '' : 'none';
   document.querySelectorAll('.pTab').forEach(b => b.classList.toggle('on', b.dataset.page === p));
   if (p === 'school') renderSchoolPage();
+  if (p === 'board') renderBoard();
 }
 document.querySelectorAll('.pTab').forEach(b =>
   b.addEventListener('click', () => switchPage(b.dataset.page)));
@@ -702,7 +1026,7 @@ function closeModal(){
   document.body.style.overflow = '';
 }
 overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); if (SEL) { SEL = null; renderBoard(); } } });
 
 document.getElementById('resetBtn').addEventListener('click', () => {
   jobFilter = null; expFilter = null;
@@ -721,7 +1045,10 @@ function renderAll(data){
   renderBars('coBars', tally(p => shortCo(p.company)));
   renderFilters();
   renderList();
+  ASSIGN = data.assignments || {};
+  SAVE_OK = data.assignments !== undefined;
   if (document.getElementById('page-school').style.display !== 'none') renderSchoolPage();
+  if (document.getElementById('page-board').style.display !== 'none') renderBoard();
 }
 
 async function load(){

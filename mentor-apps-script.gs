@@ -18,6 +18,7 @@
  */
 
 const SHEET_GID = 679275159; // 응답 탭의 gid
+const ASSIGN_SHEET = '멘토배정'; // 배정 보드 저장 탭 (없으면 자동 생성)
 
 // GitHub Pages 공개 배포용이라 연락처(전화·이메일)는 내보내지 않아요.
 // 연락처가 필요하면 시트에서 직접 확인하세요.
@@ -68,10 +69,71 @@ function doGet() {
 
   const payload = {
     updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'),
-    rows: rows
+    rows: rows,
+    assignments: readAssignments(ss)
   };
 
   return ContentService
     .createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ── 배정 보드 (대시보드 [배정 보드] 탭) ─────────────────────
+ * 칩을 옮기면 doPost로 들어와 '멘토배정' 탭에 (LDAP, 이름, 배정대학) 저장돼요.
+ * 같은 LDAP은 덮어쓰기, 배정대학 ''(미배정)은 행 삭제.
+ */
+
+function readAssignments(ss) {
+  const sh = ss.getSheetByName(ASSIGN_SHEET);
+  const out = {};
+  if (!sh || sh.getLastRow() < 2) return out;
+  sh.getDataRange().getValues().slice(1).forEach(r => {
+    const ldap = String(r[1] || '').trim();
+    const school = String(r[3] || '').trim();
+    if (ldap && school) out[ldap] = school;
+  });
+  return out;
+}
+
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const body = JSON.parse(e.postData.contents);
+    if (body.action !== 'assign') return jsonOut({ ok: false, error: 'invalid action' });
+    const ldap = String(body.ldap || '').trim().slice(0, 100);
+    const name = String(body.name || '').trim().slice(0, 50);
+    const school = String(body.school || '').trim().slice(0, 60);
+    if (!ldap) return jsonOut({ ok: false, error: 'invalid ldap' });
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sh = ss.getSheetByName(ASSIGN_SHEET);
+    if (!sh) {
+      sh = ss.insertSheet(ASSIGN_SHEET);
+      sh.appendRow(['수정시각', 'LDAP', '이름', '배정대학']);
+    }
+    const data = sh.getDataRange().getValues();
+    let rowIdx = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][1]).trim() === ldap) { rowIdx = i + 1; break; }
+    }
+    if (school === '') {
+      if (rowIdx > 0) sh.deleteRow(rowIdx);
+    } else if (rowIdx > 0) {
+      sh.getRange(rowIdx, 1, 1, 4).setValues([[new Date(), ldap, name, school]]);
+    } else {
+      sh.appendRow([new Date(), ldap, name, school]);
+    }
+    return jsonOut({ ok: true });
+  } catch (err) {
+    return jsonOut({ ok: false, error: String(err) });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function jsonOut(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
