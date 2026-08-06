@@ -128,7 +128,7 @@ function renderBoard(){
       : (p.almaSchool ? '🎓' : '');
     const wish = (p.almaSchool ? '모교 ' + shortName(p.almaSchool) + ' · ' : '')
       + (p.anySchool ? '학교 무관' : '희망 ' + p.schoolList.map(shortName).join(', '));
-    return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''}" data-ldap="${esc(p.ldap)}"
+    return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''}" draggable="${SAVE_OK}" data-ldap="${esc(p.ldap)}"
       title="${esc(shortCo(p.company))} · ${esc(jobKey(p.job))} · ${esc(wish)}">
       <span class="jDot" style="--jc:${jobColor(jobKey(p.job))}"></span>
       <span class="nm2">${esc(p.name)}<span class="ld">(${esc(p.ldap)})</span></span>
@@ -160,17 +160,38 @@ function renderBoard(){
 
   document.getElementById('boardHint').textContent = SEL
     ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
-    : '칩을 클릭해 선택 → 이동할 대학 카드를 클릭하면 옮겨져요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
+    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
 
-  grid.querySelectorAll('.chipM').forEach(el =>
+  grid.querySelectorAll('.chipM').forEach(el => {
     el.addEventListener('click', e => {
       e.stopPropagation();
       if (!SAVE_OK) return;
       SEL = SEL === el.dataset.ldap ? null : el.dataset.ldap;
       renderBoard();
-    }));
-  grid.querySelectorAll('.bCard').forEach(card =>
-    card.addEventListener('click', () => { if (SEL) moveTo(SEL, card.dataset.school); }));
+    });
+    /* 드래그로 끌어다 놓기 (데스크톱) — 클릭 이동과 병행 */
+    el.addEventListener('dragstart', e => {
+      if (!SAVE_OK) { e.preventDefault(); return; }
+      e.dataTransfer.setData('text/plain', el.dataset.ldap);
+      e.dataTransfer.effectAllowed = 'move';
+      el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging');
+      grid.querySelectorAll('.bCard.dragover').forEach(c => c.classList.remove('dragover'));
+    });
+  });
+  grid.querySelectorAll('.bCard').forEach(card => {
+    card.addEventListener('click', () => { if (SEL) moveTo(SEL, card.dataset.school); });
+    card.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; card.classList.add('dragover'); });
+    card.addEventListener('dragleave', e => { if (!card.contains(e.relatedTarget)) card.classList.remove('dragover'); });
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      card.classList.remove('dragover');
+      const ldap = e.dataTransfer.getData('text/plain');
+      if (ldap) moveTo(ldap, card.dataset.school);
+    });
+  });
 }
 
 function moveTo(ldap, school){
@@ -435,10 +456,12 @@ document.getElementById('autoBtn').addEventListener('click', () => {
   .chipM {
     display: flex; align-items: center; gap: 7px;
     background: var(--white); border-radius: 12px; padding: 8px 11px;
-    font-size: 12.5px; font-weight: 700; cursor: pointer;
+    font-size: 12.5px; font-weight: 700; cursor: grab;
     border: 2px solid transparent; transition: border-color .15s, transform .12s;
   }
   .chipM:hover { transform: translateY(-1px); }
+  .chipM.dragging { opacity: .35; cursor: grabbing; }
+  .bCard.dragover { outline: 2px solid var(--acc-text); background: var(--acc-faint); }
   .chipM.sel { border-color: var(--ink); }
   .chipM .jDot { width: 8px; height: 8px; border-radius: 50%; background: var(--jc, var(--etc)); flex: 0 0 auto; }
   .chipM .nm2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -899,7 +922,7 @@ function renderBoard(){
       : (p.almaSchool ? '🎓' : '');
     const wish = (p.almaSchool ? '모교 ' + shortName(p.almaSchool) + ' · ' : '')
       + (p.anySchool ? '학교 무관' : '희망 ' + p.schoolList.map(shortName).join(', '));
-    return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''}" data-ldap="${esc(p.ldap)}"
+    return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''}" draggable="${SAVE_OK}" data-ldap="${esc(p.ldap)}"
       title="${esc(shortCo(p.company))} · ${esc(jobKey(p.job))} · ${esc(wish)}">
       <span class="jDot" style="--jc:${jobColor(jobKey(p.job))}"></span>
       <span class="nm2">${esc(p.name)}<span class="ld">(${esc(p.ldap)})</span></span>
@@ -931,17 +954,38 @@ function renderBoard(){
 
   document.getElementById('boardHint').textContent = SEL
     ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
-    : '칩을 클릭해 선택 → 이동할 대학 카드를 클릭하면 옮겨져요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
+    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
 
-  grid.querySelectorAll('.chipM').forEach(el =>
+  grid.querySelectorAll('.chipM').forEach(el => {
     el.addEventListener('click', e => {
       e.stopPropagation();
       if (!SAVE_OK) return;
       SEL = SEL === el.dataset.ldap ? null : el.dataset.ldap;
       renderBoard();
-    }));
-  grid.querySelectorAll('.bCard').forEach(card =>
-    card.addEventListener('click', () => { if (SEL) moveTo(SEL, card.dataset.school); }));
+    });
+    /* 드래그로 끌어다 놓기 (데스크톱) — 클릭 이동과 병행 */
+    el.addEventListener('dragstart', e => {
+      if (!SAVE_OK) { e.preventDefault(); return; }
+      e.dataTransfer.setData('text/plain', el.dataset.ldap);
+      e.dataTransfer.effectAllowed = 'move';
+      el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging');
+      grid.querySelectorAll('.bCard.dragover').forEach(c => c.classList.remove('dragover'));
+    });
+  });
+  grid.querySelectorAll('.bCard').forEach(card => {
+    card.addEventListener('click', () => { if (SEL) moveTo(SEL, card.dataset.school); });
+    card.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; card.classList.add('dragover'); });
+    card.addEventListener('dragleave', e => { if (!card.contains(e.relatedTarget)) card.classList.remove('dragover'); });
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      card.classList.remove('dragover');
+      const ldap = e.dataTransfer.getData('text/plain');
+      if (ldap) moveTo(ldap, card.dataset.school);
+    });
+  });
 }
 
 function moveTo(ldap, school){
