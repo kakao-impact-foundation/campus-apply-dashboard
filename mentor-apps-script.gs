@@ -70,6 +70,7 @@ function doGet() {
     })).filter(r => r.name);
 
   const payload = {
+    v: 3, // 코드 버전 (배포 확인용 — 3: 모교 희망 필드 추가)
     updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'),
     rows: rows,
     assignments: readAssignments(ss)
