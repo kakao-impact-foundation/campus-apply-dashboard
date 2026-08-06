@@ -121,10 +121,15 @@ function renderBoard(){
   const pool = PEOPLE.filter(p => !ASSIGN[p.ldap]);
 
   const chip = (p, schoolName) => {
-    const mark = schoolName ? (p.anySchool ? '🤝' : (p.schoolList.includes(schoolName) ? '' : '⚠️')) : '';
-    const wish = p.anySchool ? '학교 무관' : p.schoolList.map(shortName).join(', ');
+    const mark = schoolName
+      ? (p.almaSchool === schoolName ? '🎓'
+        : p.anySchool ? '🤝'
+        : p.schoolList.includes(schoolName) ? '✅' : '⚠️')
+      : (p.almaSchool ? '🎓' : '');
+    const wish = (p.almaSchool ? '모교 ' + shortName(p.almaSchool) + ' · ' : '')
+      + (p.anySchool ? '학교 무관' : '희망 ' + p.schoolList.map(shortName).join(', '));
     return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''}" data-ldap="${esc(p.ldap)}"
-      title="${esc(shortCo(p.company))} · ${esc(jobKey(p.job))} · 희망: ${esc(wish)}">
+      title="${esc(shortCo(p.company))} · ${esc(jobKey(p.job))} · ${esc(wish)}">
       <span class="jDot" style="--jc:${jobColor(jobKey(p.job))}"></span>
       <span class="nm2">${esc(p.name)}<span class="ld">(${esc(p.ldap)})</span></span>
       ${p.isRe ? '<span class="mk">🔁</span>' : ''}${mark ? `<span class="mk">${mark}</span>` : ''}
@@ -155,7 +160,7 @@ function renderBoard(){
 
   document.getElementById('boardHint').textContent = SEL
     ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
-    : '칩을 클릭해 선택 → 이동할 대학 카드를 클릭하면 옮겨져요 · ⚠️=희망하지 않은 대학 · 🤝=학교 무관 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
+    : '칩을 클릭해 선택 → 이동할 대학 카드를 클릭하면 옮겨져요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
 
   grid.querySelectorAll('.chipM').forEach(el =>
     el.addEventListener('click', e => {
@@ -204,7 +209,7 @@ function saveAssign(ldap, name, school, prevSchool){
 document.getElementById('autoBtn').addEventListener('click', () => {
   const pool = PEOPLE.filter(p => !ASSIGN[p.ldap]).sort((a, b) => a.ts.localeCompare(b.ts));
   if (!pool.length) { alert('미배정 크루가 없어요!'); return; }
-  if (!confirm(`미배정 ${pool.length}명을 자동 배정할까요?\n\n· 희망 대학 우선 (다 찼으면 다른 대학 ⚠️)\n· 대학별 목표 6~7명 (GIST·UNIST 5명)\n· 직군이 부족한 대학부터 채움\n\n배정 후 칩을 옮겨서 자유롭게 조정하면 돼요.`)) return;
+  if (!confirm(`미배정 ${pool.length}명을 자동 배정할까요?\n\n· 🎓 모교 희망자 최우선 (직군 무관) → 희망 대학 순\n· 대학별 목표 6~7명 (GIST·UNIST 5명)\n· 직군이 부족한 대학부터 채움\n\n배정 후 칩을 옮겨서 자유롭게 조정하면 돼요.`)) return;
 
   const count = {}, jobs = {};
   SCHOOLS.forEach(u => { count[u.name] = 0; jobs[u.name] = {}; });
@@ -213,7 +218,18 @@ document.getElementById('autoBtn').addEventListener('click', () => {
     if (s && count[s] !== undefined) { count[s]++; const k = jobKey(p.job); jobs[s][k] = (jobs[s][k] || 0) + 1; }
   });
 
-  pool.forEach(p => {
+  /* 0순위: 모교 희망자는 직군 상관없이 모교에 먼저 배정 */
+  const almaFirst = pool.filter(p => p.almaSchool);
+  const rest = pool.filter(p => !p.almaSchool);
+  almaFirst.forEach(p => {
+    const u = SCHOOLS.find(u => u.name === p.almaSchool);
+    if (!u || count[u.name] >= goalOf(u).max) { rest.push(p); return; }
+    ASSIGN[p.ldap] = u.name;
+    count[u.name]++; const k = jobKey(p.job); jobs[u.name][k] = (jobs[u.name][k] || 0) + 1;
+    saveAssign(p.ldap, p.name, u.name, '');
+  });
+
+  rest.forEach(p => {
     const jk = jobKey(p.job);
     let cands = (p.anySchool ? SCHOOLS : SCHOOLS.filter(u => p.schoolList.includes(u.name)))
       .filter(u => count[u.name] < goalOf(u).max);
@@ -679,9 +695,16 @@ function parseSchools(raw){
 let RAW_COUNT = 0; // 중복 포함 신청서 건수
 
 function prep(rows){
+  const matchSchool = txt => {
+    const t = String(txt || '').trim();
+    if (!t) return null;
+    const u = SCHOOLS.find(u => u.keys.some(k => t.includes(k)));
+    return u ? u.name : null;
+  };
   const enriched = rows.map(r => {
     const sch = parseSchools(r.schools);
     return { ...r, schoolList: sch.list, anySchool: sch.any,
+             almaSchool: matchSchool(r.alma),
              isRe: String(r.exp || '').includes('예') };
   }).filter(r => r.name);
   RAW_COUNT = enriched.length;
@@ -869,10 +892,15 @@ function renderBoard(){
   const pool = PEOPLE.filter(p => !ASSIGN[p.ldap]);
 
   const chip = (p, schoolName) => {
-    const mark = schoolName ? (p.anySchool ? '🤝' : (p.schoolList.includes(schoolName) ? '' : '⚠️')) : '';
-    const wish = p.anySchool ? '학교 무관' : p.schoolList.map(shortName).join(', ');
+    const mark = schoolName
+      ? (p.almaSchool === schoolName ? '🎓'
+        : p.anySchool ? '🤝'
+        : p.schoolList.includes(schoolName) ? '✅' : '⚠️')
+      : (p.almaSchool ? '🎓' : '');
+    const wish = (p.almaSchool ? '모교 ' + shortName(p.almaSchool) + ' · ' : '')
+      + (p.anySchool ? '학교 무관' : '희망 ' + p.schoolList.map(shortName).join(', '));
     return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''}" data-ldap="${esc(p.ldap)}"
-      title="${esc(shortCo(p.company))} · ${esc(jobKey(p.job))} · 희망: ${esc(wish)}">
+      title="${esc(shortCo(p.company))} · ${esc(jobKey(p.job))} · ${esc(wish)}">
       <span class="jDot" style="--jc:${jobColor(jobKey(p.job))}"></span>
       <span class="nm2">${esc(p.name)}<span class="ld">(${esc(p.ldap)})</span></span>
       ${p.isRe ? '<span class="mk">🔁</span>' : ''}${mark ? `<span class="mk">${mark}</span>` : ''}
@@ -903,7 +931,7 @@ function renderBoard(){
 
   document.getElementById('boardHint').textContent = SEL
     ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
-    : '칩을 클릭해 선택 → 이동할 대학 카드를 클릭하면 옮겨져요 · ⚠️=희망하지 않은 대학 · 🤝=학교 무관 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
+    : '칩을 클릭해 선택 → 이동할 대학 카드를 클릭하면 옮겨져요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
 
   grid.querySelectorAll('.chipM').forEach(el =>
     el.addEventListener('click', e => {
@@ -952,7 +980,7 @@ function saveAssign(ldap, name, school, prevSchool){
 document.getElementById('autoBtn').addEventListener('click', () => {
   const pool = PEOPLE.filter(p => !ASSIGN[p.ldap]).sort((a, b) => a.ts.localeCompare(b.ts));
   if (!pool.length) { alert('미배정 크루가 없어요!'); return; }
-  if (!confirm(`미배정 ${pool.length}명을 자동 배정할까요?\n\n· 희망 대학 우선 (다 찼으면 다른 대학 ⚠️)\n· 대학별 목표 6~7명 (GIST·UNIST 5명)\n· 직군이 부족한 대학부터 채움\n\n배정 후 칩을 옮겨서 자유롭게 조정하면 돼요.`)) return;
+  if (!confirm(`미배정 ${pool.length}명을 자동 배정할까요?\n\n· 🎓 모교 희망자 최우선 (직군 무관) → 희망 대학 순\n· 대학별 목표 6~7명 (GIST·UNIST 5명)\n· 직군이 부족한 대학부터 채움\n\n배정 후 칩을 옮겨서 자유롭게 조정하면 돼요.`)) return;
 
   const count = {}, jobs = {};
   SCHOOLS.forEach(u => { count[u.name] = 0; jobs[u.name] = {}; });
@@ -961,7 +989,18 @@ document.getElementById('autoBtn').addEventListener('click', () => {
     if (s && count[s] !== undefined) { count[s]++; const k = jobKey(p.job); jobs[s][k] = (jobs[s][k] || 0) + 1; }
   });
 
-  pool.forEach(p => {
+  /* 0순위: 모교 희망자는 직군 상관없이 모교에 먼저 배정 */
+  const almaFirst = pool.filter(p => p.almaSchool);
+  const rest = pool.filter(p => !p.almaSchool);
+  almaFirst.forEach(p => {
+    const u = SCHOOLS.find(u => u.name === p.almaSchool);
+    if (!u || count[u.name] >= goalOf(u).max) { rest.push(p); return; }
+    ASSIGN[p.ldap] = u.name;
+    count[u.name]++; const k = jobKey(p.job); jobs[u.name][k] = (jobs[u.name][k] || 0) + 1;
+    saveAssign(p.ldap, p.name, u.name, '');
+  });
+
+  rest.forEach(p => {
     const jk = jobKey(p.job);
     let cands = (p.anySchool ? SCHOOLS : SCHOOLS.filter(u => p.schoolList.includes(u.name)))
       .filter(u => count[u.name] < goalOf(u).max);
@@ -1011,6 +1050,7 @@ function openPerson(idx){
     <div class="mGrid">
       <div class="mRow"><span class="k">소속</span><span class="v">${esc(p.company)} · ${esc(p.dept)}</span></div>
       <div class="mRow"><span class="k">멘토 참여 경험</span><span class="v">${p.isRe ? '있음 (재참여)' : '처음 (신규)'}</span></div>
+      ${p.almaSchool ? `<div class="mRow"><span class="k">모교 희망</span><span class="v">🎓 ${esc(p.almaSchool)}</span></div>` : ''}
       ${p.referral ? `<div class="mRow"><span class="k">추천 크루</span><span class="v">${esc(p.referral)}</span></div>` : ''}
     </div>
     ${p.motive ? `<div class="mSec"><h3>지원 동기 · 기대하는 점</h3><p>${esc(p.motive)}</p></div>` : ''}

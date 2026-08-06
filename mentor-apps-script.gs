@@ -43,6 +43,7 @@ function doGet() {
   const iCoach   = col('코칭 가능한');
   const iMentor  = col('멘토링 경험');
   const iSchools = col('희망하는 학교');
+  const iAlma    = col('모교 희망');
   const iRef     = col('추천 크루');
 
   const tz = ss.getSpreadsheetTimeZone();
@@ -64,6 +65,7 @@ function doGet() {
       coach: str(r, iCoach),
       mentorExp: str(r, iMentor),
       schools: str(r, iSchools),
+      alma: str(r, iAlma),
       referral: str(r, iRef)
     })).filter(r => r.name);
 
