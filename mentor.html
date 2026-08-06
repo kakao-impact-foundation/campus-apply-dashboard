@@ -129,17 +129,17 @@ function renderBoard(){
     const wish = (p.almaSchool ? '모교 ' + shortName(p.almaSchool) + ' · ' : '')
       + (p.anySchool ? '학교 무관' : '희망 ' + p.schoolList.map(shortName).join(', '));
     return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''}" draggable="${SAVE_OK}" data-ldap="${esc(p.ldap)}"
-      title="${esc(shortCo(p.company))} · ${esc(jobKey(p.job))} · ${esc(wish)}">
-      <span class="jDot" style="--jc:${jobColor(jobKey(p.job))}"></span>
+      title="${esc(shortCo(p.company))} · ${esc(p.job || '기타')} · ${esc(wish)}">
+      <span class="jDot" style="--jc:${jobColorRaw(p.job)}"></span>
       <span class="nm2">${esc(p.name)}<span class="ld">(${esc(p.ldap)})</span></span>
       ${p.isRe ? '<span class="mk">🔁</span>' : ''}${mark ? `<span class="mk">${mark}</span>` : ''}
     </div>`;
   };
   const jobsSummary = ppl => {
     const m = new Map();
-    ppl.forEach(p => { const k = jobKey(p.job); m.set(k, (m.get(k) || 0) + 1); });
+    ppl.forEach(p => { const k = String(p.job || '기타').trim(); m.set(k, (m.get(k) || 0) + 1); });
     return [...m.entries()].sort((a, b) => b[1] - a[1])
-      .map(([j, n]) => `<span class="jChip" style="--jc:${jobColor(j)}">${esc(j)} ${n}</span>`).join('');
+      .map(([j, n]) => `<span class="jChip" style="--jc:${jobColorRaw(j)}">${esc(j)} ${n}</span>`).join('');
   };
 
   grid.innerHTML =
@@ -148,7 +148,11 @@ function renderBoard(){
       <div class="bChips">${pool.map(p => chip(p, '')).join('') || '<span class="noneB">모두 배정됐어요 🎉</span>'}</div>
     </section>` +
     SCHOOLS.map(u => {
-      const ppl = PEOPLE.filter(p => ASSIGN[p.ldap] === u.name);
+      const ppl = PEOPLE.filter(p => ASSIGN[p.ldap] === u.name)
+        .sort((a, b) => {
+          const rank = p => p.almaSchool === u.name ? 0 : (p.schoolList.includes(u.name) || p.anySchool) ? 1 : 2;
+          return rank(a) - rank(b) || a.ts.localeCompare(b.ts);
+        });
       const g = goalOf(u);
       const cls = ppl.length > g.max ? 'over' : (ppl.length >= g.min ? 'ok' : '');
       return `<section class="bCard ${SEL ? 'droptarget' : ''}" data-school="${esc(u.name)}">
@@ -665,7 +669,7 @@ const SCHOOLS = [
 const ANY_SCHOOL = '학교 무관';
 
 /* ── 직군 색상 ── */
-const JOB_COLORS = { '개발': 'var(--dev)', '기획': 'var(--plan)', '디자인': 'var(--design)', '데이터': 'var(--data)' };
+const JOB_COLORS = { '개발': 'var(--dev)', '기획': 'var(--plan)', '디자인': 'var(--design)', '데이터': 'var(--data)', 'AI': 'var(--data)' };
 const jobColor = j => JOB_COLORS[j] || 'var(--etc)';
 
 /* 폴백: 시트 연동이 실패했을 때 빈 화면 대신 안내를 띄우기 위한 빈 데이터
@@ -686,7 +690,13 @@ const jobKey = j => {
   if (j.includes('개발')) return '개발';
   if (j.includes('기획')) return '기획';
   if (j.includes('디자')) return '디자인';
+  if (/ai/i.test(j)) return 'AI';
   return '기타';
+};
+/* 보드 표시용: 원본 직군 텍스트 + 색은 jobKey 기준 */
+const jobColorRaw = j => {
+  const k = jobKey(j);
+  return k === 'AI' ? 'var(--data)' : jobColor(k);
 };
 /* 대학별 배정 목표 — GIST·UNIST는 학생 25명이라 5명, 나머지는 6~7명 */
 const goalOf = u => (u.short === 'GIST' || u.short === 'UNIST')
@@ -923,17 +933,17 @@ function renderBoard(){
     const wish = (p.almaSchool ? '모교 ' + shortName(p.almaSchool) + ' · ' : '')
       + (p.anySchool ? '학교 무관' : '희망 ' + p.schoolList.map(shortName).join(', '));
     return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''}" draggable="${SAVE_OK}" data-ldap="${esc(p.ldap)}"
-      title="${esc(shortCo(p.company))} · ${esc(jobKey(p.job))} · ${esc(wish)}">
-      <span class="jDot" style="--jc:${jobColor(jobKey(p.job))}"></span>
+      title="${esc(shortCo(p.company))} · ${esc(p.job || '기타')} · ${esc(wish)}">
+      <span class="jDot" style="--jc:${jobColorRaw(p.job)}"></span>
       <span class="nm2">${esc(p.name)}<span class="ld">(${esc(p.ldap)})</span></span>
       ${p.isRe ? '<span class="mk">🔁</span>' : ''}${mark ? `<span class="mk">${mark}</span>` : ''}
     </div>`;
   };
   const jobsSummary = ppl => {
     const m = new Map();
-    ppl.forEach(p => { const k = jobKey(p.job); m.set(k, (m.get(k) || 0) + 1); });
+    ppl.forEach(p => { const k = String(p.job || '기타').trim(); m.set(k, (m.get(k) || 0) + 1); });
     return [...m.entries()].sort((a, b) => b[1] - a[1])
-      .map(([j, n]) => `<span class="jChip" style="--jc:${jobColor(j)}">${esc(j)} ${n}</span>`).join('');
+      .map(([j, n]) => `<span class="jChip" style="--jc:${jobColorRaw(j)}">${esc(j)} ${n}</span>`).join('');
   };
 
   grid.innerHTML =
@@ -942,7 +952,11 @@ function renderBoard(){
       <div class="bChips">${pool.map(p => chip(p, '')).join('') || '<span class="noneB">모두 배정됐어요 🎉</span>'}</div>
     </section>` +
     SCHOOLS.map(u => {
-      const ppl = PEOPLE.filter(p => ASSIGN[p.ldap] === u.name);
+      const ppl = PEOPLE.filter(p => ASSIGN[p.ldap] === u.name)
+        .sort((a, b) => {
+          const rank = p => p.almaSchool === u.name ? 0 : (p.schoolList.includes(u.name) || p.anySchool) ? 1 : 2;
+          return rank(a) - rank(b) || a.ts.localeCompare(b.ts);
+        });
       const g = goalOf(u);
       const cls = ppl.length > g.max ? 'over' : (ppl.length >= g.min ? 'ok' : '');
       return `<section class="bCard ${SEL ? 'droptarget' : ''}" data-school="${esc(u.name)}">
