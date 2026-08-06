@@ -141,7 +141,13 @@
   .mList li { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--ink); cursor: pointer; animation: rise .35s ease both; }
   .mList li .gDot { width: 7px; height: 7px; }
   .mList li:hover .mName { color: var(--pink-text); }
-  .mName { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mList li .mName {
+    flex: 1; min-width: 0;
+    font-family: inherit; font-size: 11.5px; font-weight: 600;
+    line-height: 1.45; letter-spacing: -0.01em;
+    margin: 0; padding: 0;
+    overflow-wrap: anywhere;
+  }
   .fChip { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 2px 9px; background: var(--white); color: var(--muted); flex: 0 0 auto; }
   .fChip.ok { background: var(--ink); color: #fff; }
   .mCard .none { font-size: 14px; color: var(--muted); }
@@ -388,7 +394,7 @@
   }
   .mClose:hover { background: var(--line); }
   .mOver { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
-  .mName {
+  .modal .mName {
     font-family: 'KakaoBigSans', Pretendard, sans-serif;
     font-weight: 800; font-size: 26px; letter-spacing: -0.01em;
     margin-bottom: 14px; padding-right: 40px;
