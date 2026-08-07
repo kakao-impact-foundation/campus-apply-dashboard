@@ -84,7 +84,7 @@ function doGet() {
     })).filter(r => r.name);
 
   const payload = {
-    v: 5, // 코드 버전 (배포 확인용 — 5: 명단 탭 26-1 스타일 서식)
+    v: 6, // 코드 버전 (배포 확인용 — 6: 명단 갱신 고속화)
     updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'),
     rows: rows,
     assignments: readAssignments(ss)
@@ -238,12 +238,22 @@ function rebuildRoster(ss) {
   ]));
 
   const sh = existing || ss.insertSheet(ROSTER_SHEET);
-  sh.clear();
-  sh.getRange(1, 1, out.length, 14).setValues(out);
-
-  /* ── 26-1 명단 스타일 서식 ── */
   const nRows = rows.length;
   const NC = 14;
+
+  /* ── 빠른 경로: 인원 수가 그대로면 값 + 매칭 학교 색만 갱신 (서식은 유지됨) ── */
+  const prevRows = existing ? existing.getLastRow() - 2 : -1;
+  if (existing && prevRows === nRows && existing.getLastColumn() >= NC) {
+    sh.getRange(1, 1, out.length, NC).setValues(out);
+    const bg = rows.map(p => [(SCHOOL_COLORS[p.school] || SCHOOL_COLORS['미배정'])[0]]);
+    const fc = rows.map(p => [(SCHOOL_COLORS[p.school] || SCHOOL_COLORS['미배정'])[1]]);
+    sh.getRange(3, 2, nRows, 1).setBackgrounds(bg).setFontColors(fc);
+    return;
+  }
+
+  /* ── 전체 재생성 (인원 변동 시): 값 + 26-1 명단 스타일 서식 ── */
+  sh.clear();
+  sh.getRange(1, 1, out.length, 14).setValues(out);
   /* 제목 */
   sh.getRange(1, 1).setFontWeight('bold').setFontSize(12);
   /* 헤더: 검정 배경 + 흰 볼드 + 가운데 */
