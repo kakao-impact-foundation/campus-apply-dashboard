@@ -19,6 +19,13 @@
 
 const SHEET_GID = 679275159; // 응답 탭의 gid
 const ASSIGN_SHEET = '멘토배정'; // 배정 보드 저장 탭 (없으면 자동 생성)
+const ROSTER_SHEET = '멘토 참여자 정보'; // 26-1 명단 형식의 자동 생성 탭
+const SCHOOL_SHORT = {
+  '가천대학교': '가천대', '경운대학교': '경운대', '고려대학교 세종캠퍼스': '고려대(세종)',
+  '동국대학교': '동국대', '부산외국어대학교': '부산외대', '서울대학교': '서울대',
+  '서울시립대학교': '시립대', '서울여자대학교': '서울여대', '한라대학교': '한라대',
+  '광주과학기술원 GIST': 'GIST', '한국과학기술원 KAIST': 'KAIST', '울산과학기술원 UNIST': 'UNIST'
+};
 
 // GitHub Pages 공개 배포용이라 연락처(전화·이메일)는 내보내지 않아요.
 // 연락처가 필요하면 시트에서 직접 확인하세요.
@@ -70,11 +77,18 @@ function doGet() {
     })).filter(r => r.name);
 
   const payload = {
-    v: 3, // 코드 버전 (배포 확인용 — 3: 모교 희망 필드 추가)
+    v: 4, // 코드 버전 (배포 확인용 — 4: 멘토 참여자 정보 탭 자동 생성)
     updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'),
     rows: rows,
     assignments: readAssignments(ss)
   };
+
+  /* 신청 인원이 달라졌으면 '멘토 참여자 정보' 탭도 갱신 */
+  try {
+    const nPeople = new Set(rows.map(r => r.ldap || r.name)).size;
+    const roster = ss.getSheetByName(ROSTER_SHEET);
+    if (!roster || roster.getLastRow() - 2 !== nPeople) rebuildRoster(ss);
+  } catch (err) { /* 명단 갱신 실패해도 대시보드 응답은 정상 반환 */ }
 
   return ContentService
     .createTextOutput(JSON.stringify(payload))
@@ -127,6 +141,7 @@ function doPost(e) {
     } else {
       sh.appendRow([new Date(), ldap, name, school]);
     }
+    try { rebuildRoster(ss); } catch (err) { /* 명단 갱신 실패는 무시 */ }
     return jsonOut({ ok: true });
   } catch (err) {
     return jsonOut({ ok: false, error: String(err) });
@@ -139,4 +154,85 @@ function jsonOut(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ── '멘토 참여자 정보' 탭 자동 생성 ─────────────────────────
+ * 26-1 카카오멘토 명단 형식. 배정 변경(doPost)·인원 변동(doGet) 때마다 다시 생성돼요.
+ * 자동 생성 탭이므로 직접 수정하지 마세요 — 예외로 '팀장' 열은 LDAP 기준으로 보존됩니다.
+ */
+
+function rebuildRoster(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheets().find(s => s.getSheetId() === SHEET_GID) || ss.getSheets()[0];
+  const values = sheet.getDataRange().getValues();
+  const header = values[0];
+  const col = (keyword) => header.findIndex(h => String(h).includes(keyword));
+  const iName = col('성함');
+  const iLdap = header.findIndex(h => String(h).trim() === 'LDAP');
+  const iCompany = col('공동체명'), iDept = col('부서명'), iJob = col('직군');
+  const iExp = col('참여 경험'), iPhone = col('핸드폰'), iEmail = col('회사 Email');
+  const iAlma = col('모교 희망'), iWork = col('맡고 계신 업무'), iCoach = col('코칭 가능한');
+  const str = (row, i) => i >= 0 ? String(row[i] || '').trim() : '';
+
+  /* 같은 LDAP 재제출은 최신 응답만 (뒤 행이 최신) */
+  const byLdap = new Map();
+  values.slice(1).forEach(r => { if (str(r, iName)) byLdap.set(str(r, iLdap) || str(r, iName), r); });
+  const assign = readAssignments(ss);
+
+  /* 기존 탭의 '팀장' 열(F) 값을 LDAP 기준으로 보존 */
+  const existing = ss.getSheetByName(ROSTER_SHEET);
+  const lead = {};
+  if (existing && existing.getLastRow() > 2) {
+    existing.getDataRange().getValues().slice(2).forEach(r => {
+      const l = String(r[3] || '').trim();
+      if (l && String(r[5] || '').trim()) lead[l] = String(r[5]).trim();
+    });
+  }
+
+  /* 카테고리: 직군 + 업무·코칭 내용 키워드로 자동 분류 (26-1은 AI 분류였음) */
+  const category = (job, txt) => {
+    if (/기획|디자/.test(job)) return '기획 · 디자인';
+    if (/AI/i.test(job)) return 'AI/ML';
+    if (/ios|android|안드로이드|모바일|스위프트|swift|kotlin.*(앱|클라이언트)|앱 개발/i.test(txt)) return '모바일 (Android/iOS)';
+    if (/프론트|front|react|vue|next\.js|웹 ?개발|javascript|typescript/i.test(txt)) return '프론트엔드 (FE)';
+    if (/데이터 ?(엔지니어|파이프라인|분석|플랫폼)|hadoop|spark|kafka/i.test(txt)) return '데이터 엔지니어링';
+    if (/개발/.test(job)) return '서버/플랫폼 (BE/Infra)';
+    return '기타';
+  };
+
+  const rows = [...byLdap.values()].map(r => {
+    const ldap = str(r, iLdap);
+    const full = assign[ldap] || '';
+    return {
+      school: full ? (SCHOOL_SHORT[full] || full) : '미배정',
+      unassigned: !full,
+      name: str(r, iName), ldap: ldap,
+      company: str(r, iCompany), dept: str(r, iDept), job: str(r, iJob),
+      cat: category(str(r, iJob), str(r, iWork) + ' ' + str(r, iCoach)),
+      phone: str(r, iPhone), email: str(r, iEmail),
+      re: str(r, iExp).includes('예') ? 'O' : '',
+      alma: str(r, iAlma)
+    };
+  });
+  const grp = s => /^[가-힣]/.test(s) ? 0 : 1; /* 한글 대학 먼저, 영문 뒤 */
+  rows.sort((a, b) =>
+    (a.unassigned - b.unassigned) ||
+    (grp(a.school) - grp(b.school)) ||
+    a.school.localeCompare(b.school, 'ko') ||
+    a.name.localeCompare(b.name, 'ko'));
+
+  const out = [
+    ['26-2학기 테크포임팩트 캠퍼스 카카오멘토 명단 (자동 생성 — 배정은 대시보드 배정 보드에서)', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['순번', '매칭 학교', '이름', 'LDAP', '이름 (LDAP)', '팀장', '공동체', '소속 부서 (최하위 조직명)', '직군', '카테고리', '전화번호', '이메일', '재참여', '모교 희망']
+  ];
+  rows.forEach((p, i) => out.push([
+    i + 1, p.school, p.name, p.ldap, p.name + ' (' + p.ldap + ')', lead[p.ldap] || '',
+    p.company, p.dept, p.job, p.cat, p.phone, p.email, p.re, p.alma
+  ]));
+
+  const sh = existing || ss.insertSheet(ROSTER_SHEET);
+  sh.clearContents();
+  sh.getRange(1, 1, out.length, 14).setValues(out);
+  sh.getRange(1, 1).setNote('이 탭은 자동 생성돼요 — 배정 보드에서 배정을 바꾸거나 새 신청이 들어오면 다시 만들어집니다.\n직접 수정하면 지워져요 (예외: "팀장" 열은 LDAP 기준으로 보존).');
+  sh.getRange(2, 1, 1, 14).setFontWeight('bold');
 }
