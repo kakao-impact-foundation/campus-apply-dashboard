@@ -20,6 +20,13 @@
 const SHEET_GID = 679275159; // 응답 탭의 gid
 const ASSIGN_SHEET = '멘토배정'; // 배정 보드 저장 탭 (없으면 자동 생성)
 const ROSTER_SHEET = '멘토 참여자 정보'; // 26-1 명단 형식의 자동 생성 탭
+const SCHOOL_COLORS = { /* [배경, 글자색] — 26-1 명단의 매칭 학교 열 톤 */
+  '가천대': ['#F4CCCC', '#990000'], '경운대': ['#FCE5CD', '#B45F06'], '고려대(세종)': ['#FFF2CC', '#7F6000'],
+  '동국대': ['#D9EAD3', '#274E13'], '부산외대': ['#D0E0E3', '#0C343D'], '서울대': ['#C9DAF8', '#1C4587'],
+  '시립대': ['#CFE2F3', '#073763'], '서울여대': ['#EAD1DC', '#741B47'], '한라대': ['#D9D2E9', '#20124D'],
+  'GIST': ['#E6B8AF', '#85200C'], 'KAIST': ['#B6D7A8', '#38761D'], 'UNIST': ['#A2C4C9', '#134F5C'],
+  '미배정': ['#EFEFEF', '#666666']
+};
 const SCHOOL_SHORT = {
   '가천대학교': '가천대', '경운대학교': '경운대', '고려대학교 세종캠퍼스': '고려대(세종)',
   '동국대학교': '동국대', '부산외국어대학교': '부산외대', '서울대학교': '서울대',
@@ -77,7 +84,7 @@ function doGet() {
     })).filter(r => r.name);
 
   const payload = {
-    v: 4, // 코드 버전 (배포 확인용 — 4: 멘토 참여자 정보 탭 자동 생성)
+    v: 5, // 코드 버전 (배포 확인용 — 5: 명단 탭 26-1 스타일 서식)
     updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'),
     rows: rows,
     assignments: readAssignments(ss)
@@ -231,8 +238,38 @@ function rebuildRoster(ss) {
   ]));
 
   const sh = existing || ss.insertSheet(ROSTER_SHEET);
-  sh.clearContents();
+  sh.clear();
   sh.getRange(1, 1, out.length, 14).setValues(out);
+
+  /* ── 26-1 명단 스타일 서식 ── */
+  const nRows = rows.length;
+  const NC = 14;
+  /* 제목 */
+  sh.getRange(1, 1).setFontWeight('bold').setFontSize(12);
+  /* 헤더: 검정 배경 + 흰 볼드 + 가운데 */
+  sh.getRange(2, 1, 1, NC).setBackground('#000000').setFontColor('#FFFFFF')
+    .setFontWeight('bold').setHorizontalAlignment('center').setVerticalAlignment('middle');
+  if (nRows > 0) {
+    const body = sh.getRange(3, 1, nRows, NC);
+    body.setVerticalAlignment('middle');
+    /* 배경색: 매칭 학교(B) 파스텔, 이름(C)·이름(LDAP)(E) 크림, LDAP(D) 시안 */
+    const bgs = [], fcs = [], fws = [], has = [];
+    rows.forEach(p => {
+      const c = SCHOOL_COLORS[p.school] || SCHOOL_COLORS['미배정'];
+      bgs.push(['#FFFFFF', c[0], '#FFF2CC', '#5FF0F0', '#FFF2CC', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF']);
+      fcs.push(['#000000', c[1], '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000']);
+      fws.push(['normal', 'bold', 'normal', 'bold', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal']);
+      has.push(['center', 'center', 'center', 'left', 'left', 'center', 'center', 'center', 'center', 'center', 'center', 'left', 'center', 'center']);
+    });
+    body.setBackgrounds(bgs).setFontColors(fcs).setFontWeights(fws).setHorizontalAlignments(has);
+  }
+  /* 테두리: 표 전체 얇은 검정 */
+  sh.getRange(2, 1, nRows + 1, NC)
+    .setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+  /* 열 너비 + 머리글 고정 */
+  const widths = [50, 110, 70, 110, 165, 50, 135, 185, 95, 155, 115, 210, 55, 135];
+  widths.forEach((w, i) => sh.setColumnWidth(i + 1, w));
+  sh.setFrozenRows(2);
+
   sh.getRange(1, 1).setNote('이 탭은 자동 생성돼요 — 배정 보드에서 배정을 바꾸거나 새 신청이 들어오면 다시 만들어집니다.\n직접 수정하면 지워져요 (예외: "팀장" 열은 LDAP 기준으로 보존).');
-  sh.getRange(2, 1, 1, 14).setFontWeight('bold');
 }
