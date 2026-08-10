@@ -765,10 +765,10 @@ function renderHero(){
   countUp(document.getElementById('appCount'), RAW_COUNT);
   countUp(document.getElementById('reCount'), re);
   countUp(document.getElementById('newCount'), n - re);
-  const pct = Math.min(Math.round(n / GOAL * 100), 100);
+  const pct = Math.round(n / GOAL * 100);
   countUp(document.getElementById('pct'), pct, '%');
   requestAnimationFrame(() => {
-    document.getElementById('meterFill').style.width = pct + '%';
+    document.getElementById('meterFill').style.width = Math.min(pct, 100) + '%';
   });
 }
 
