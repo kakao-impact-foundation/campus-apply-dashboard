@@ -1,9 +1,10 @@
-# 캠퍼스 신청현황 대시보드 (사회혁신가 + 멘토)
+# 캠퍼스 신청현황 어드민 대시보드 (사회혁신가 + 멘토)
 
-테크포임팩트 캠퍼스 26-2 모집 현황을 보여주는 내부용 대시보드 2종.
+테크포임팩트 캠퍼스 26-2 모집 현황을 보여주는 내부용 어드민 대시보드.
 
-- **사회혁신가**: https://kakao-impact-foundation.github.io/campus-apply-dashboard/ (비밀번호 게이트)
-- **멘토**: https://kakao-impact-foundation.github.io/campus-apply-dashboard/mentor.html (같은 비밀번호)
+- **어드민 (메인)**: https://kakao-impact-foundation.github.io/campus-apply-dashboard/admin.html (비밀번호 게이트)
+  - 탭 하나로 사회혁신가·멘토 현황을 오가며 봄. 옛 개별 링크(`/`, `/mentor.html`)로 들어와도 어드민의 해당 탭으로 자동 이동
+  - 새 대상(예: 학생)이 생기면 `admin.html`의 `TABS` 배열에 한 줄 추가
 - 내부 공유용: 화면 앞 비밀번호(캐주얼 차단) + `noindex` 메타 + `robots.txt`로 검색 색인 차단
 - 소스에는 신청 데이터가 들어있지 않음 (모든 데이터는 열람 시점에 Apps Script에서 로드)
 
@@ -15,9 +16,10 @@
 
 | 파일 | 역할 |
 |---|---|
-| `index.html` | 사회혁신가 대시보드 본체 |
+| `admin.html` | **어드민 허브 (메인 진입점)** — 사회혁신가/멘토 탭, 대시보드는 iframe으로 로드 |
+| `index.html` | 사회혁신가 대시보드 본체 (직접 접속 시 `admin.html#innovator`로 이동) |
 | `apps-script.gs` | 사회혁신가 시트 연동용 Apps Script (사회혁신가 응답 시트에 설치) |
-| `mentor.html` | 멘토 대시보드 본체 (목표 60명 · 직군/소속 분포 · 12개 대학별 희망 현황) |
+| `mentor.html` | 멘토 대시보드 본체 (직접 접속 시 `admin.html#mentor`로 이동) |
 | `mentor-apps-script.gs` | 멘토 시트 연동용 Apps Script (멘토 응답 시트에 설치) |
 
 ## 시트 자동 연동 켜기

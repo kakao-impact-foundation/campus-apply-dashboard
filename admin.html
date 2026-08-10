@@ -93,19 +93,6 @@
   }
   .tab.active .dot { background: #fff; opacity: 1; }
 
-  .openNew {
-    flex: 0 0 auto;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--muted);
-    text-decoration: none;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 6px 12px;
-    transition: all .15s ease;
-  }
-  .openNew:hover { color: var(--ink); border-color: var(--muted); }
-
   /* ── 패널(iframe) ────────────────────── */
   main { flex: 1 1 auto; position: relative; }
   main iframe {
@@ -154,7 +141,6 @@
   @media (max-width: 640px) {
     .topbar { flex-wrap: wrap; gap: 10px; padding: 12px 16px; }
     .brand .term { display: none; }
-    .openNew { display: none; }
   }
 </style>
 </head>
@@ -174,7 +160,6 @@
 <div class="topbar">
   <div class="brand">TECH FOR !MPACT <span class="adminBadge">Admin</span><span class="term">2026 가을학기</span></div>
   <nav class="tabs" id="tabs"></nav>
-  <a class="openNew" id="openNew" href="#" target="_blank" rel="noopener">새 창에서 열기 ↗</a>
 </div>
 <main id="panels"></main>
 
@@ -188,7 +173,6 @@ const TABS = [
 
 const tabsEl = document.getElementById('tabs');
 const panelsEl = document.getElementById('panels');
-const openNewEl = document.getElementById('openNew');
 const frames = {};
 
 TABS.forEach(t => {
@@ -213,7 +197,6 @@ function activate(id){
   }
   Object.entries(frames).forEach(([k, f]) => f.classList.toggle('active', k === tab.id));
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.id === tab.id));
-  openNewEl.href = tab.src;
   if (location.hash !== '#' + tab.id) history.replaceState(null, '', '#' + tab.id);
 }
 
