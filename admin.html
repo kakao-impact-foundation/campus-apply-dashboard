@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>테크포임팩트 캠퍼스 · 어드민</title>
+<style>
+  @font-face {
+    font-family: 'KakaoBigSans';
+    src: url('https://kakao-impact-foundation.github.io/campus_2026_spring/_next/static/media/KakaoBigSans_ExtraBold-s.p.3i93y_9jgiys7.woff2') format('woff2');
+    font-weight: 800; font-display: swap;
+  }
+  @font-face {
+    font-family: 'KakaoBigSans';
+    src: url('https://kakao-impact-foundation.github.io/campus_2026_spring/_next/static/media/KakaoBigSans_Bold-s.p.2g6eznqppexyp.woff2') format('woff2');
+    font-weight: 700; font-display: swap;
+  }
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+  :root {
+    --ink: #1C1C1C;
+    --muted: #8C8C8C;
+    --line: #ECEFF3;
+    --white: #FFFFFF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, sans-serif;
+    background: var(--white);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── 상단 바 ─────────────────────────── */
+  .topbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--line);
+    background: var(--white);
+  }
+  .brand {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .brand .adminBadge {
+    background: var(--ink);
+    color: #fff;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 11.5px;
+  }
+  .brand .term { color: var(--muted); font-weight: 700; font-size: 12px; }
+
+  nav.tabs { display: flex; gap: 8px; flex: 1 1 auto; }
+  .tab {
+    appearance: none;
+    border: 1.5px solid var(--line);
+    background: var(--white);
+    color: var(--muted);
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 13.5px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all .15s ease;
+  }
+  .tab .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--tab-color, var(--muted));
+    opacity: .45;
+  }
+  .tab:hover { border-color: var(--tab-color); color: var(--ink); }
+  .tab.active {
+    border-color: var(--tab-color);
+    background: var(--tab-color);
+    color: #fff;
+  }
+  .tab.active .dot { background: #fff; opacity: 1; }
+
+  .openNew {
+    flex: 0 0 auto;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 12px;
+    transition: all .15s ease;
+  }
+  .openNew:hover { color: var(--ink); border-color: var(--muted); }
+
+  /* ── 패널(iframe) ────────────────────── */
+  main { flex: 1 1 auto; position: relative; }
+  main iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: none;
+    background: var(--white);
+  }
+  main iframe.active { display: block; }
+
+  /* ── 비밀번호 게이트 (캐주얼 차단) ──── */
+  body.locked .topbar, body.locked main { display: none; }
+  #gate {
+    display: none;
+    position: fixed; inset: 0;
+    background: var(--white);
+    z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  body.locked #gate { display: flex; }
+  .gateCard { text-align: center; max-width: 340px; padding: 24px; }
+  .gateCard h2 {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800; font-size: 22px; margin: 16px 0 8px;
+  }
+  .gateCard p { color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+  .gateCard input {
+    width: 100%; padding: 12px 14px;
+    border: 1.5px solid var(--line); border-radius: 10px;
+    font-family: inherit; font-size: 15px; text-align: center;
+    outline: none;
+  }
+  .gateCard input:focus { border-color: var(--ink); }
+  .gateCard button {
+    width: 100%; margin-top: 10px; padding: 12px;
+    border: 0; border-radius: 10px;
+    background: var(--ink); color: #fff;
+    font-family: inherit; font-weight: 700; font-size: 15px;
+    cursor: pointer;
+  }
+  .gateCard .err { color: #D93636; font-size: 13px; margin-top: 10px; min-height: 18px; }
+
+  @media (max-width: 640px) {
+    .topbar { flex-wrap: wrap; gap: 10px; padding: 12px 16px; }
+    .brand .term { display: none; }
+    .openNew { display: none; }
+  }
+</style>
+</head>
+<body class="locked">
+
+<div id="gate">
+  <div class="gateCard">
+    <div style="font-family:'KakaoBigSans',Pretendard,sans-serif;font-weight:800;font-size:13px;">TECH FOR !MPACT <span style="background:#1C1C1C;color:#fff;border-radius:999px;padding:3px 10px;font-size:11.5px;">Admin</span></div>
+    <h2>운영팀 대시보드</h2>
+    <p>신청 현황 어드민은 운영팀용이에요.<br/>비밀번호를 입력해 주세요.</p>
+    <input type="password" id="gatePw" placeholder="비밀번호" autocomplete="off" />
+    <button id="gateBtn">들어가기</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="brand">TECH FOR !MPACT <span class="adminBadge">Admin</span><span class="term">2026 가을학기</span></div>
+  <nav class="tabs" id="tabs"></nav>
+  <a class="openNew" id="openNew" href="#" target="_blank" rel="noopener">새 창에서 열기 ↗</a>
+</div>
+<main id="panels"></main>
+
+<script>
+/* ── 탭 설정: 새 대상(예: 학생)이 생기면 여기에 한 줄만 추가하면 돼요 ── */
+const TABS = [
+  { id: 'innovator', label: '사회혁신가', src: 'index.html',  color: '#E470DC' },
+  { id: 'mentor',    label: '멘토',       src: 'mentor.html', color: '#F5B301' },
+  // { id: 'student', label: '학생', src: 'student.html', color: '#3B82F6' },
+];
+
+const tabsEl = document.getElementById('tabs');
+const panelsEl = document.getElementById('panels');
+const openNewEl = document.getElementById('openNew');
+const frames = {};
+
+TABS.forEach(t => {
+  const btn = document.createElement('button');
+  btn.className = 'tab';
+  btn.dataset.id = t.id;
+  btn.style.setProperty('--tab-color', t.color);
+  btn.innerHTML = '<span class="dot"></span>' + t.label;
+  btn.addEventListener('click', () => activate(t.id));
+  tabsEl.appendChild(btn);
+});
+
+function activate(id){
+  const tab = TABS.find(t => t.id === id) || TABS[0];
+  /* iframe은 처음 열 때 한 번만 만들고, 이후엔 전환만 (로딩 상태 유지) */
+  if (!frames[tab.id]) {
+    const f = document.createElement('iframe');
+    f.src = tab.src;
+    f.title = tab.label + ' 신청 현황';
+    frames[tab.id] = f;
+    panelsEl.appendChild(f);
+  }
+  Object.entries(frames).forEach(([k, f]) => f.classList.toggle('active', k === tab.id));
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.id === tab.id));
+  openNewEl.href = tab.src;
+  if (location.hash !== '#' + tab.id) history.replaceState(null, '', '#' + tab.id);
+}
+
+window.addEventListener('hashchange', () => activate(location.hash.slice(1)));
+
+/* ── 비밀번호 게이트 (index/mentor와 동일 · 한 번 입력하면 전부 열려요) ── */
+const GATE_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+async function sha256(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function unlock(){
+  document.body.classList.remove('locked');
+  activate(location.hash.slice(1) || TABS[0].id);
+}
+async function tryGate(){
+  const pw = document.getElementById('gatePw').value;
+  if (!pw) return;
+  if (await sha256(pw) === GATE_HASH) {
+    sessionStorage.setItem('tfi_gate', '1');
+    unlock();
+  } else {
+    document.getElementById('gateErr').textContent = '비밀번호가 맞지 않아요';
+    document.getElementById('gatePw').value = '';
+  }
+}
+document.getElementById('gateBtn').addEventListener('click', tryGate);
+document.getElementById('gatePw').addEventListener('keydown', e => { if (e.key === 'Enter') tryGate(); });
+if (sessionStorage.getItem('tfi_gate') === '1') unlock();
+else document.getElementById('gatePw').focus();
+</script>
+</body>
+</html>
