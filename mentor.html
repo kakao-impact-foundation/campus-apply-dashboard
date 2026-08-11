@@ -304,6 +304,16 @@ if (top === self) location.replace('admin.html#mentor');</script>
   .bCard h3 { font-family: 'KakaoBigSans', Pretendard, sans-serif; font-size: 15.5px; font-weight: 800; }
   .bCard .bCnt { margin-left: auto; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
   .bCnt.ok { color: #0FA36B; } .bCnt.over { color: #D93025; }
+  .bMeta {
+    display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+    font-size: 11.5px; font-weight: 700; color: var(--muted);
+    margin: -4px 0 10px; cursor: help;
+  }
+  .bMeta .bGoal {
+    margin-left: auto; font-size: 10.5px; font-weight: 800;
+    background: var(--acc-faint); color: var(--acc-text);
+    border-radius: 999px; padding: 3px 9px;
+  }
   .bJobs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 9px; }
   .bChips { display: flex; flex-direction: column; gap: 6px; }
   .chipM {
@@ -547,6 +557,7 @@ if (top === self) location.replace('admin.html#mentor');</script>
       </div>
       <button class="btnAuto" id="autoBtn">🎲 미배정 자동 배정</button>
     </div>
+    <div class="card noteCard" id="boardRatio"></div>
     <div class="card" id="boardNote" style="display:none">⚠️ 배정 저장을 켜려면 <b>mentor-apps-script.gs 새 버전 배포</b>가 필요해요 — 멘토 시트 → Apps Script → 코드 교체 → 배포 관리 → ✏️ → 버전 "새 버전" → 배포 (URL은 그대로예요)</div>
     <div class="boardGrid" id="boardGrid"></div>
   </div><!-- /page-board -->
@@ -570,20 +581,33 @@ const DATA_URL = "https://script.google.com/macros/s/AKfycbylsc_c9-BtV07U5ABqIzA
 
 const GOAL = 60;
 
-/* ── 26-2 참여 대학 (12개교) ── */
+/* ── 26-2 참여 대학 (12개교) ──
+ * students: 수강신청 모집 규모(멘토 목표 산정용) · stuLabel: 표시용 · 부산외대는 미입력이라 40명 가정 */
 const SCHOOLS = [
-  { name: '가천대학교',            short: '가천대',      region: '경기 성남', keys: ['가천'] },
-  { name: '경운대학교',            short: '경운대',      region: '경북 구미', keys: ['경운'] },
-  { name: '고려대학교 세종캠퍼스',  short: '고려대(세종)', region: '세종',     keys: ['고려'] },
-  { name: '동국대학교',            short: '동국대',      region: '서울',     keys: ['동국'] },
-  { name: '부산외국어대학교',      short: '부산외대',    region: '부산',     keys: ['부산외'] },
-  { name: '서울대학교',            short: '서울대',      region: '서울',     keys: ['서울대학교', '서울대'] },
-  { name: '서울시립대학교',        short: '시립대',      region: '서울',     keys: ['시립'] },
-  { name: '서울여자대학교',        short: '서울여대',    region: '서울',     keys: ['서울여자', '서울여대'] },
-  { name: '한라대학교',            short: '한라대',      region: '강원 원주', keys: ['한라'] },
-  { name: '광주과학기술원 GIST',   short: 'GIST',        region: '광주',     keys: ['GIST', '지스트', '광주과학'] },
-  { name: '한국과학기술원 KAIST',  short: 'KAIST',       region: '대전',     keys: ['KAIST', '카이스트', '한국과학'] },
-  { name: '울산과학기술원 UNIST',  short: 'UNIST',       region: '울산',     keys: ['UNIST', '유니스트', '울산과학'] }
+  { name: '가천대학교',            short: '가천대',      region: '경기 성남', keys: ['가천'],
+    students: 30, stuLabel: '30명',      ctype: '교양',     course: '테크포임팩트' },
+  { name: '경운대학교',            short: '경운대',      region: '경북 구미', keys: ['경운'],
+    students: 40, stuLabel: '40명',      ctype: '전공선택', course: '산업 현장 AI 유해 요인 분석' },
+  { name: '고려대학교 세종캠퍼스',  short: '고려대(세종)', region: '세종',     keys: ['고려'],
+    students: 35, stuLabel: '35명',      ctype: '전공선택', course: 'AI·소비자행동·사회혁신프로젝트' },
+  { name: '동국대학교',            short: '동국대',      region: '서울',     keys: ['동국'],
+    students: 30, stuLabel: '30명',      ctype: '전공필수', course: '오픈소스소프트웨어프로젝트' },
+  { name: '부산외국어대학교',      short: '부산외대',    region: '부산',     keys: ['부산외'],
+    students: 40, stuLabel: '40명 가정', ctype: '',        course: '' },
+  { name: '서울대학교',            short: '서울대',      region: '서울',     keys: ['서울대학교', '서울대'],
+    students: 35, stuLabel: '30~35명',   ctype: '전공선택', course: '창의연구실습' },
+  { name: '서울시립대학교',        short: '시립대',      region: '서울',     keys: ['시립'],
+    students: 20, stuLabel: '20명',      ctype: '교양',     course: '사회문제해결형AI' },
+  { name: '서울여자대학교',        short: '서울여대',    region: '서울',     keys: ['서울여자', '서울여대'],
+    students: 30, stuLabel: '30명',      ctype: '교양선택', course: '카카오와함께하는 테크포임팩트 캡스톤디자인' },
+  { name: '한라대학교',            short: '한라대',      region: '강원 원주', keys: ['한라'],
+    students: 40, stuLabel: '최대 40명', ctype: '교양선택', course: 'AI 지역솔루션: 카카오와 함께하는 테크포임팩트 캠퍼스' },
+  { name: '광주과학기술원 GIST',   short: 'GIST',        region: '광주',     keys: ['GIST', '지스트', '광주과학'],
+    students: 25, stuLabel: '25명',      ctype: '전공선택', course: 'AI산업 전략과 실증 프로젝트' },
+  { name: '한국과학기술원 KAIST',  short: 'KAIST',       region: '대전',     keys: ['KAIST', '카이스트', '한국과학'],
+    students: 40, stuLabel: '40명',      ctype: '전공선택', course: '전산학특강〈테크 포 임팩트〉' },
+  { name: '울산과학기술원 UNIST',  short: 'UNIST',       region: '울산',     keys: ['UNIST', '유니스트', '울산과학'],
+    students: 24, stuLabel: '24명',      ctype: '전공선택', course: '테크포임팩트 헬스케어' }
 ];
 const ANY_SCHOOL = '학교 무관';
 
@@ -640,10 +664,12 @@ const jobColorRaw = j => {
   const k = jobKey(j);
   return k === 'AI' ? 'var(--data)' : jobColor(k);
 };
-/* 대학별 배정 목표 — GIST·UNIST는 학생 25명이라 5명, 나머지는 6~7명 */
-const goalOf = u => (u.short === 'GIST' || u.short === 'UNIST')
-  ? { min: 5, max: 5, label: '5' }
-  : { min: 6, max: 7, label: '6~7' };
+/* 대학별 배정 목표 — 수강생 40명당 멘토 6명 비례 (예: 40명→6, 30명→4~5, 20명→3) */
+const goalOf = u => {
+  const x = (u.students || 40) / 40 * 6;
+  const min = Math.floor(x), max = Math.ceil(x);
+  return { min, max, label: min === max ? String(min) : min + '~' + max };
+};
 const shortName = n => (SCHOOLS.find(u => u.name === n) || { short: n }).short;
 
 /* 공동체명 축약: '카카오'는 그대로, 나머지는 '카카오' 접두어 제거 (모빌리티, 엔터테인먼트 …) */
@@ -1083,6 +1109,13 @@ function renderBoard(){
   document.getElementById('boardNote').style.display = SAVE_OK ? 'none' : '';
   document.getElementById('autoBtn').disabled = !SAVE_OK;
 
+  /* 배정 기준 요약 — 수강 인원 합계와 그에 비례한 멘토 목표 */
+  const totStu = SCHOOLS.reduce((s, u) => s + u.students, 0);
+  const totMin = SCHOOLS.reduce((s, u) => s + goalOf(u).min, 0);
+  const totMax = SCHOOLS.reduce((s, u) => s + goalOf(u).max, 0);
+  document.getElementById('boardRatio').innerHTML =
+    `🎓 대학별 멘토 목표는 <b>수강 인원 비례</b>예요 — 수강생 40명당 멘토 6명. 12개교 수강 합계 약 <b>${totStu}명</b> → 멘토 <b>${totMin}~${totMax}명</b> · 카드의 🎓가 각 대학 모집 규모, 과목명은 마우스를 올리면 보여요 (부산외대는 미입력이라 40명 가정)`;
+
   const byLdap = {};
   PEOPLE.forEach(p => byLdap[p.ldap] = p);
   /* 합불 심사가 켜져 있으면 ✅합격·🤔보류만 배정 대상 */
@@ -1131,6 +1164,7 @@ function renderBoard(){
       const cls = ppl.length > g.max ? 'over' : (ppl.length >= g.min ? 'ok' : '');
       return `<section class="bCard ${SEL ? 'droptarget' : ''}" data-school="${esc(u.name)}">
         <div class="bHead"><h3>${esc(u.short)}</h3><span class="bCnt ${cls}">${ppl.length}<span style="font-weight:600;color:var(--muted)">/${g.label}</span></span></div>
+        <div class="bMeta" title="${esc(u.course ? u.ctype + ' · ' + u.course : '모집 규모·과목 미입력 — 40명으로 가정')}">🎓 수강 ${esc(u.stuLabel)}${u.ctype ? ` · ${esc(u.ctype)}` : ''}<span class="bGoal">멘토 ${g.label}명</span></div>
         ${ppl.length ? `<div class="bJobs">${jobsSummary(ppl)}</div>` : ''}
         <div class="bChips">${ppl.map(p => chip(p, u.name)).join('') || '<span class="noneB">비어 있어요</span>'}</div>
       </section>`;
@@ -1138,7 +1172,7 @@ function renderBoard(){
 
   document.getElementById('boardHint').textContent = SEL
     ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
-    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 🤔=보류 · ⛔=합격·보류 아님 · 심사에서 ✅합격·🤔보류인 크루만 배정 대상이에요 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
+    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 🤔=보류 · ⛔=불합격인데 배정돼 있음 · 심사에서 ✅합격·🤔보류인 크루만 배정 대상이에요 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
 
   grid.querySelectorAll('.chipM').forEach(el => {
     el.addEventListener('click', e => {
@@ -1211,7 +1245,7 @@ document.getElementById('autoBtn').addEventListener('click', () => {
     alert(STATUS_OK ? '배정할 ✅합격·🤔보류 크루가 없어요 — [부서별 심사] 탭에서 먼저 심사해 주세요!' : '미배정 크루가 없어요!');
     return;
   }
-  if (!confirm(`미배정 ${pool.length}명을 자동 배정할까요?${STATUS_OK ? ' (✅합격·🤔보류 크루만)' : ''}\n\n· 🎓 모교 희망자 최우선 (직군 무관) → 희망 대학 순\n· 대학별 목표 6~7명 (GIST·UNIST 5명)\n· 직군이 부족한 대학부터 채움\n\n배정 후 칩을 옮겨서 자유롭게 조정하면 돼요.`)) return;
+  if (!confirm(`미배정 ${pool.length}명을 자동 배정할까요?${STATUS_OK ? ' (✅합격·🤔보류 크루만)' : ''}\n\n· 🎓 모교 희망자 최우선 (직군 무관) → 희망 대학 순\n· 대학별 목표는 수강 인원 비례 (40명당 멘토 6명, 예: 40명→6 · 30명→4~5 · 20명→3)\n· 직군이 부족한 대학부터 채움\n\n배정 후 칩을 옮겨서 자유롭게 조정하면 돼요.`)) return;
 
   const count = {}, jobs = {};
   SCHOOLS.forEach(u => { count[u.name] = 0; jobs[u.name] = {}; });
