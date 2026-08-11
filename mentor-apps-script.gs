@@ -19,6 +19,7 @@
 
 const SHEET_GID = 679275159; // 응답 탭의 gid
 const ASSIGN_SHEET = '멘토배정'; // 배정 보드 저장 탭 (없으면 자동 생성)
+const STATUS_SHEET = '멘토심사'; // 합불 심사(합격·보류·불합격) 저장 탭 (없으면 자동 생성)
 const ROSTER_SHEET = '멘토 참여자 정보'; // 26-1 명단 형식의 자동 생성 탭
 const SCHOOL_COLORS = { /* [배경, 글자색] — 26-1 명단의 매칭 학교 열 톤 */
   '가천대': ['#F4CCCC', '#990000'], '경운대': ['#FCE5CD', '#B45F06'], '고려대(세종)': ['#FFF2CC', '#7F6000'],
@@ -59,6 +60,9 @@ function doGet() {
   const iSchools = col('희망하는 학교');
   const iAlma    = col('모교 희망');
   const iRef     = col('추천 크루');
+  /* '추천 크루 LDAP'가 별도 열일 때만 내보내요 (iRef와 같은 열이면 중복 방지) */
+  const iRefLdap0 = header.findIndex(h => String(h).includes('추천 크루') && String(h).includes('LDAP'));
+  const iRefLdap = iRefLdap0 === iRef ? -1 : iRefLdap0;
 
   const tz = ss.getSpreadsheetTimeZone();
   const str = (row, i) => i >= 0 ? String(row[i] || '').trim() : '';
@@ -80,14 +84,16 @@ function doGet() {
       mentorExp: str(r, iMentor),
       schools: str(r, iSchools),
       alma: str(r, iAlma),
-      referral: str(r, iRef)
+      referral: str(r, iRef),
+      refLdap: str(r, iRefLdap)
     })).filter(r => r.name);
 
   const payload = {
-    v: 6, // 코드 버전 (배포 확인용 — 6: 명단 갱신 고속화)
+    v: 7, // 코드 버전 (배포 확인용 — 7: 합불 심사 저장 + 추천 크루 LDAP)
     updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'),
     rows: rows,
-    assignments: readAssignments(ss)
+    assignments: readAssignments(ss),
+    statuses: readStatuses(ss)
   };
 
   /* 신청 인원이 달라졌으면 '멘토 참여자 정보' 탭도 갱신 */
@@ -119,37 +125,73 @@ function readAssignments(ss) {
   return out;
 }
 
+/* ── 합불 심사 (대시보드 심사 버튼) ─────────────────────────
+ * 합격·보류·불합격 버튼을 누르면 doPost로 들어와 '멘토심사' 탭에 저장돼요.
+ * 같은 LDAP은 덮어쓰기, 상태 ''(해제)는 행 삭제.
+ */
+
+function readStatuses(ss) {
+  const sh = ss.getSheetByName(STATUS_SHEET);
+  const out = {};
+  if (!sh || sh.getLastRow() < 2) return out;
+  sh.getDataRange().getValues().slice(1).forEach(r => {
+    const ldap = String(r[1] || '').trim();
+    const status = String(r[3] || '').trim();
+    if (ldap && status) out[ldap] = status;
+  });
+  return out;
+}
+
+/* 시트 탭에서 LDAP으로 행을 찾아 upsert/삭제 (멘토배정·멘토심사 공용) */
+function upsertByLdap(ss, sheetName, headerRow, ldap, values, remove) {
+  let sh = ss.getSheetByName(sheetName);
+  if (!sh) {
+    sh = ss.insertSheet(sheetName);
+    sh.appendRow(headerRow);
+  }
+  const data = sh.getDataRange().getValues();
+  let rowIdx = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][1]).trim() === ldap) { rowIdx = i + 1; break; }
+  }
+  if (remove) {
+    if (rowIdx > 0) sh.deleteRow(rowIdx);
+  } else if (rowIdx > 0) {
+    sh.getRange(rowIdx, 1, 1, values.length).setValues([values]);
+  } else {
+    sh.appendRow(values);
+  }
+}
+
 function doPost(e) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     const body = JSON.parse(e.postData.contents);
-    if (body.action !== 'assign') return jsonOut({ ok: false, error: 'invalid action' });
     const ldap = String(body.ldap || '').trim().slice(0, 100);
     const name = String(body.name || '').trim().slice(0, 50);
-    const school = String(body.school || '').trim().slice(0, 60);
     if (!ldap) return jsonOut({ ok: false, error: 'invalid ldap' });
-
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sh = ss.getSheetByName(ASSIGN_SHEET);
-    if (!sh) {
-      sh = ss.insertSheet(ASSIGN_SHEET);
-      sh.appendRow(['수정시각', 'LDAP', '이름', '배정대학']);
+
+    if (body.action === 'assign') {
+      const school = String(body.school || '').trim().slice(0, 60);
+      upsertByLdap(ss, ASSIGN_SHEET, ['수정시각', 'LDAP', '이름', '배정대학'],
+        ldap, [new Date(), ldap, name, school], school === '');
+      try { rebuildRoster(ss); } catch (err) { /* 명단 갱신 실패는 무시 */ }
+      return jsonOut({ ok: true });
     }
-    const data = sh.getDataRange().getValues();
-    let rowIdx = -1;
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][1]).trim() === ldap) { rowIdx = i + 1; break; }
+
+    if (body.action === 'status') {
+      const status = String(body.status || '').trim();
+      if (!['합격', '보류', '불합격', ''].includes(status)) {
+        return jsonOut({ ok: false, error: 'invalid status' });
+      }
+      upsertByLdap(ss, STATUS_SHEET, ['수정시각', 'LDAP', '이름', '심사상태'],
+        ldap, [new Date(), ldap, name, status], status === '');
+      return jsonOut({ ok: true });
     }
-    if (school === '') {
-      if (rowIdx > 0) sh.deleteRow(rowIdx);
-    } else if (rowIdx > 0) {
-      sh.getRange(rowIdx, 1, 1, 4).setValues([[new Date(), ldap, name, school]]);
-    } else {
-      sh.appendRow([new Date(), ldap, name, school]);
-    }
-    try { rebuildRoster(ss); } catch (err) { /* 명단 갱신 실패는 무시 */ }
-    return jsonOut({ ok: true });
+
+    return jsonOut({ ok: false, error: 'invalid action' });
   } catch (err) {
     return jsonOut({ ok: false, error: String(err) });
   } finally {

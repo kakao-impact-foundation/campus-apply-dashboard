@@ -110,170 +110,6 @@ if (top === self) location.replace('admin.html#mentor');</script>
   }
   .chip b { font-weight: 800; color: var(--ink); }
 
-  
-/* ── 배정 보드 ── */
-function renderBoard(){
-  const grid = document.getElementById('boardGrid');
-  if (!grid) return;
-  document.getElementById('boardNote').style.display = SAVE_OK ? 'none' : '';
-  document.getElementById('autoBtn').disabled = !SAVE_OK;
-
-  const byLdap = {};
-  PEOPLE.forEach(p => byLdap[p.ldap] = p);
-  const pool = PEOPLE.filter(p => !ASSIGN[p.ldap]);
-
-  const chip = (p, schoolName) => {
-    const mark = schoolName
-      ? (p.almaSchool === schoolName ? '🎓'
-        : p.anySchool ? '🤝'
-        : p.schoolList.includes(schoolName) ? '✅' : '⚠️')
-      : (p.almaSchool ? '🎓' : '');
-    const wish = (p.almaSchool ? '모교 ' + shortName(p.almaSchool) + ' · ' : '')
-      + (p.anySchool ? '학교 무관' : '희망 ' + p.schoolList.map(shortName).join(', '));
-    return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''}" draggable="${SAVE_OK}" data-ldap="${esc(p.ldap)}"
-      title="${esc(shortCo(p.company))} · ${esc(p.job || '기타')} · ${esc(wish)}">
-      <span class="jDot" style="--jc:${jobColorRaw(p.job)}"></span>
-      <span class="nm2">${esc(p.name)}<span class="ld">(${esc(p.ldap)})</span></span>
-      ${p.isRe ? '<span class="mk">🔁</span>' : ''}${mark ? `<span class="mk">${mark}</span>` : ''}
-    </div>`;
-  };
-  const jobsSummary = ppl => {
-    const m = new Map();
-    ppl.forEach(p => { const k = String(p.job || '기타').trim(); m.set(k, (m.get(k) || 0) + 1); });
-    return [...m.entries()].sort((a, b) => b[1] - a[1])
-      .map(([j, n]) => `<span class="jChip" style="--jc:${jobColorRaw(j)}">${esc(j)} ${n}</span>`).join('');
-  };
-
-  grid.innerHTML =
-    `<section class="bCard pool ${SEL ? 'droptarget' : ''}" data-school="">
-      <div class="bHead"><h3>🗂 미배정</h3><span class="bCnt">${pool.length}명</span></div>
-      <div class="bChips">${pool.map(p => chip(p, '')).join('') || '<span class="noneB">모두 배정됐어요 🎉</span>'}</div>
-    </section>` +
-    SCHOOLS.map(u => {
-      const ppl = PEOPLE.filter(p => ASSIGN[p.ldap] === u.name)
-        .sort((a, b) => {
-          const rank = p => p.almaSchool === u.name ? 0 : (p.schoolList.includes(u.name) || p.anySchool) ? 1 : 2;
-          return rank(a) - rank(b) || a.ts.localeCompare(b.ts);
-        });
-      const g = goalOf(u);
-      const cls = ppl.length > g.max ? 'over' : (ppl.length >= g.min ? 'ok' : '');
-      return `<section class="bCard ${SEL ? 'droptarget' : ''}" data-school="${esc(u.name)}">
-        <div class="bHead"><h3>${esc(u.short)}</h3><span class="bCnt ${cls}">${ppl.length}<span style="font-weight:600;color:var(--muted)">/${g.label}</span></span></div>
-        ${ppl.length ? `<div class="bJobs">${jobsSummary(ppl)}</div>` : ''}
-        <div class="bChips">${ppl.map(p => chip(p, u.name)).join('') || '<span class="noneB">비어 있어요</span>'}</div>
-      </section>`;
-    }).join('');
-
-  document.getElementById('boardHint').textContent = SEL
-    ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
-    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
-
-  grid.querySelectorAll('.chipM').forEach(el => {
-    el.addEventListener('click', e => {
-      e.stopPropagation();
-      if (!SAVE_OK) return;
-      SEL = SEL === el.dataset.ldap ? null : el.dataset.ldap;
-      renderBoard();
-    });
-    /* 드래그로 끌어다 놓기 (데스크톱) — 클릭 이동과 병행 */
-    el.addEventListener('dragstart', e => {
-      if (!SAVE_OK) { e.preventDefault(); return; }
-      e.dataTransfer.setData('text/plain', el.dataset.ldap);
-      e.dataTransfer.effectAllowed = 'move';
-      el.classList.add('dragging');
-    });
-    el.addEventListener('dragend', () => {
-      el.classList.remove('dragging');
-      grid.querySelectorAll('.bCard.dragover').forEach(c => c.classList.remove('dragover'));
-    });
-  });
-  grid.querySelectorAll('.bCard').forEach(card => {
-    card.addEventListener('click', () => { if (SEL) moveTo(SEL, card.dataset.school); });
-    card.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; card.classList.add('dragover'); });
-    card.addEventListener('dragleave', e => { if (!card.contains(e.relatedTarget)) card.classList.remove('dragover'); });
-    card.addEventListener('drop', e => {
-      e.preventDefault();
-      card.classList.remove('dragover');
-      const ldap = e.dataTransfer.getData('text/plain');
-      if (ldap) moveTo(ldap, card.dataset.school);
-    });
-  });
-}
-
-function moveTo(ldap, school){
-  const p = PEOPLE.find(x => x.ldap === ldap);
-  const prev = ASSIGN[ldap] || '';
-  const next = school || '';
-  SEL = null;
-  if (prev === next) { renderBoard(); return; }
-  if (next) ASSIGN[ldap] = next; else delete ASSIGN[ldap];
-  renderBoard();
-  saveAssign(ldap, p ? p.name : '', next, prev);
-}
-
-/* 저장은 백그라운드로 — 화면 즉시 반영, 같은 사람 요청은 순서 보장 */
-const assignChain = {};
-function saveAssign(ldap, name, school, prevSchool){
-  assignChain[ldap] = (assignChain[ldap] || Promise.resolve())
-    .then(() => fetch(DATA_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'assign', ldap, name, school })
-    }))
-    .then(res => res.json())
-    .then(out => { if (!out.ok) throw new Error(out.error || 'save failed'); })
-    .catch(err => {
-      console.warn('배정 저장 실패', err);
-      const cur = ASSIGN[ldap] || '';
-      if (cur === school) { /* 그 사이 또 옮기지 않았다면 되돌리기 */
-        if (prevSchool) ASSIGN[ldap] = prevSchool; else delete ASSIGN[ldap];
-        renderBoard();
-      }
-      alert(`${name}님 배정 저장에 실패했어요. 다시 옮겨 주세요.`);
-    });
-}
-
-/* 자동 배정: 희망 대학 우선 · 정원 내 · 직군이 부족한 곳부터 */
-document.getElementById('autoBtn').addEventListener('click', () => {
-  const pool = PEOPLE.filter(p => !ASSIGN[p.ldap]).sort((a, b) => a.ts.localeCompare(b.ts));
-  if (!pool.length) { alert('미배정 크루가 없어요!'); return; }
-  if (!confirm(`미배정 ${pool.length}명을 자동 배정할까요?\n\n· 🎓 모교 희망자 최우선 (직군 무관) → 희망 대학 순\n· 대학별 목표 6~7명 (GIST·UNIST 5명)\n· 직군이 부족한 대학부터 채움\n\n배정 후 칩을 옮겨서 자유롭게 조정하면 돼요.`)) return;
-
-  const count = {}, jobs = {};
-  SCHOOLS.forEach(u => { count[u.name] = 0; jobs[u.name] = {}; });
-  PEOPLE.forEach(p => {
-    const s = ASSIGN[p.ldap];
-    if (s && count[s] !== undefined) { count[s]++; const k = jobKey(p.job); jobs[s][k] = (jobs[s][k] || 0) + 1; }
-  });
-
-  /* 0순위: 모교 희망자는 직군 상관없이 모교에 먼저 배정 */
-  const almaFirst = pool.filter(p => p.almaSchool);
-  const rest = pool.filter(p => !p.almaSchool);
-  almaFirst.forEach(p => {
-    const u = SCHOOLS.find(u => u.name === p.almaSchool);
-    if (!u || count[u.name] >= goalOf(u).max) { rest.push(p); return; }
-    ASSIGN[p.ldap] = u.name;
-    count[u.name]++; const k = jobKey(p.job); jobs[u.name][k] = (jobs[u.name][k] || 0) + 1;
-    saveAssign(p.ldap, p.name, u.name, '');
-  });
-
-  rest.forEach(p => {
-    const jk = jobKey(p.job);
-    let cands = (p.anySchool ? SCHOOLS : SCHOOLS.filter(u => p.schoolList.includes(u.name)))
-      .filter(u => count[u.name] < goalOf(u).max);
-    if (!cands.length) cands = SCHOOLS.filter(u => count[u.name] < goalOf(u).max);
-    if (!cands.length) return; /* 전 대학 만석 → 미배정 유지 */
-    cands.sort((a, b) =>
-      ((jobs[a.name][jk] || 0) - (jobs[b.name][jk] || 0)) ||
-      ((count[a.name] / goalOf(a).max) - (count[b.name] / goalOf(b).max)) ||
-      (count[a.name] - count[b.name]));
-    const pick = cands[0];
-    ASSIGN[p.ldap] = pick.name;
-    count[pick.name]++; jobs[pick.name][jk] = (jobs[pick.name][jk] || 0) + 1;
-    saveAssign(p.ldap, p.name, pick.name, '');
-  });
-  renderBoard();
-});
-
 /* ── 페이지 탭 ── */
   .pageTabs { display: flex; gap: 8px; margin: 20px 0 44px; flex-wrap: wrap; }
   .pTab {
@@ -475,6 +311,49 @@ document.getElementById('autoBtn').addEventListener('click', () => {
   .chipM .mk + .mk { margin-left: 0; }
   .noneB { font-size: 12.5px; color: var(--muted); font-weight: 600; }
 
+  /* ── 합불 심사 (태그 + 버튼) ── */
+  .stRow { display: inline-flex; gap: 3px; flex: 0 0 auto; }
+  .stBtn {
+    border: none; cursor: pointer; font-family: inherit;
+    font-size: 10.5px; font-weight: 800; border-radius: 999px; padding: 4px 9px;
+    background: var(--line); color: var(--muted);
+    transition: background .15s, color .15s, transform .12s;
+  }
+  .stBtn:hover { transform: translateY(-1px); }
+  .stBtn:disabled { opacity: .4; cursor: default; transform: none; }
+  .stBtn.on.pass { background: #0FA36B; color: #fff; }
+  .stBtn.on.hold { background: var(--acc); color: var(--ink); }
+  .stBtn.on.fail { background: #D93025; color: #fff; }
+  .stChip { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 3px 10px; }
+  .stChip:empty { display: none; }
+  .stChip.pass { background: #DCF3E8; color: #0B7A50; }
+  .stChip.hold { background: var(--acc-soft); color: #8F6400; }
+  .stChip.fail { background: #FBDEDB; color: #B3211A; }
+  .refB { color: var(--acc-text); font-weight: 700; }
+  .noteCard { background: var(--acc-faint); font-size: 13.5px; font-weight: 600; color: var(--body); padding: 14px 20px; margin-bottom: 18px; }
+
+  /* ── 부서별 심사 ── */
+  .deptGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; align-items: start; }
+  @media (max-width: 420px) { .deptGrid { grid-template-columns: 1fr; } }
+  .dgHead {
+    font-size: 12.5px; font-weight: 800; color: var(--muted);
+    margin: 14px 2px 8px; display: flex; align-items: center; gap: 7px;
+  }
+  .dgHead .multi { font-size: 11px; font-weight: 800; color: var(--acc-text); background: var(--acc-faint); border-radius: 999px; padding: 2px 9px; }
+  .dRow {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--white); border-radius: 14px; padding: 10px 12px;
+    cursor: pointer; margin-bottom: 6px;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .dRow:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(28,28,28,.06); }
+  .dRow .jDot { width: 8px; height: 8px; border-radius: 50%; background: var(--jc, var(--etc)); flex: 0 0 auto; }
+  .dInfo { flex: 1; min-width: 0; }
+  .dName { font-size: 13.5px; font-weight: 800; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .dName .tg { font-size: 10.5px; font-weight: 800; border-radius: 999px; padding: 2px 8px; background: var(--acc-faint); color: var(--acc-text); }
+  .dMeta { font-size: 11.5px; color: var(--muted); font-weight: 600; margin-top: 3px; }
+  .chipM.ban { border-color: #F1B1AC; opacity: .6; }
+
   footer { margin-top: 48px; text-align: center; font-size: 12.5px; color: var(--muted); }
   .sheetBtn {
     display: inline-block; margin-top: 12px;
@@ -567,9 +446,12 @@ document.getElementById('autoBtn').addEventListener('click', () => {
 
   <nav class="pageTabs rise" style="animation-delay:.04s">
     <button class="pTab on" data-page="home">신청 현황</button>
+    <button class="pTab" data-page="dept">부서별 심사</button>
     <button class="pTab" data-page="school">멘토 희망 대학</button>
     <button class="pTab" data-page="board">배정 보드</button>
   </nav>
+
+  <div class="card noteCard" id="statusNote" style="display:none">⚠️ 합불 심사 저장을 켜려면 <b>mentor-apps-script.gs 새 버전 배포</b>가 필요해요 — 멘토 시트 → Apps Script → 코드 교체 → 배포 관리 → ✏️ → 버전 "새 버전" → 배포 (URL은 그대로예요)</div>
 
   <div id="page-home">
     <section class="card hero rise" style="animation-delay:.06s">
@@ -588,6 +470,9 @@ document.getElementById('autoBtn').addEventListener('click', () => {
           <span class="chip">🔁 재참여 <b id="reCount">0</b>명</span>
           <span class="chip">✨ 신규 <b id="newCount">0</b>명</span>
           <span class="chip">목표 <b>60</b>명</span>
+          <span class="chip">✅ 합격 <b id="passCount">0</b></span>
+          <span class="chip">🤔 보류 <b id="holdCount">0</b></span>
+          <span class="chip">❌ 불합격 <b id="failCount">0</b></span>
         </div>
       </div>
     </section>
@@ -613,10 +498,15 @@ document.getElementById('autoBtn').addEventListener('click', () => {
         </div>
         <div class="kwRow rise" id="jobRow" style="animation-delay:.22s"></div>
         <div class="kwRow rise" id="expRow" style="animation-delay:.24s"></div>
+        <div class="kwRow rise" id="statusRow" style="animation-delay:.26s"></div>
         <div class="pList" id="pList"></div>
       </div>
     </div>
   </div><!-- /page-home -->
+
+  <div id="page-dept" style="display:none">
+    <div class="deptGrid" id="deptGrid"></div>
+  </div>
 
   <div id="page-school" style="display:none">
     <div class="schoolGrid" id="schoolGrid"></div>
@@ -681,11 +571,34 @@ const SNAPSHOT = { updatedAt: "", rows: [] };
 let PEOPLE = [];
 let jobFilter = null;
 let expFilter = null;
+let stFilter = null;
 
 /* ── 배정 보드 상태 ── */
 let ASSIGN = {};      // ldap → 배정 대학(전체 이름)
 let SAVE_OK = false;  // Apps Script가 assignments를 내려주면 저장 가능
 let SEL = null;       // 이동하려고 선택한 칩의 ldap
+
+/* ── 합불 심사 상태 ── */
+let STATUS = {};       // ldap → '합격' | '보류' | '불합격'
+let STATUS_OK = false; // Apps Script가 statuses를 내려주면 저장 가능
+const ST_LABEL = { '합격': '✅ 합격', '보류': '🤔 보류', '불합격': '❌ 불합격' };
+const ST_CLASS = { '합격': 'pass', '보류': 'hold', '불합격': 'fail' };
+const eligible = p => !STATUS_OK || STATUS[p.ldap] === '합격' || STATUS[p.ldap] === '보류';
+
+/* 심사 표시 칩 (상태 없으면 비어서 숨겨짐) */
+const stChipHTML = p => {
+  const s = STATUS[p.ldap] || '';
+  return `<span class="stChip ${ST_CLASS[s] || ''}" data-ldap="${esc(p.ldap)}">${s ? ST_LABEL[s] : ''}</span>`;
+};
+/* 심사 버튼 3개 (같은 버튼 다시 누르면 해제) */
+const stBtnsHTML = p => {
+  const s = STATUS[p.ldap] || '';
+  const b = (val, cls) => `<button class="stBtn ${cls} ${s === val ? 'on' : ''}" data-st="${val}" data-ldap="${esc(p.ldap)}"${STATUS_OK ? '' : ' disabled'}>${val}</button>`;
+  return `<span class="stRow">${b('합격', 'pass')}${b('보류', 'hold')}${b('불합격', 'fail')}</span>`;
+};
+/* 추천 크루 배지 */
+const refHTML = p => p.referral
+  ? `<span class="refB">💌 ${esc(p.referral)}${p.refLdap ? ` (${esc(p.refLdap)})` : ''} 추천</span>` : '';
 
 const jobKey = j => {
   j = String(j || '');
@@ -772,6 +685,15 @@ function renderHero(){
   requestAnimationFrame(() => {
     document.getElementById('meterFill').style.width = Math.min(pct, 100) + '%';
   });
+  updateStatusCounts();
+}
+
+/* 합불 카운트는 클릭할 때마다 갱신되니 애니메이션 없이 바로 표시 */
+function updateStatusCounts(){
+  const cnt = s => PEOPLE.filter(p => STATUS[p.ldap] === s).length;
+  document.getElementById('passCount').textContent = cnt('합격');
+  document.getElementById('holdCount').textContent = cnt('보류');
+  document.getElementById('failCount').textContent = cnt('불합격');
 }
 
 /* ── 바 차트 (직군 · 소속) ── */
@@ -817,6 +739,19 @@ function renderFilters(){
     `<button class="kw ${(expFilter || '') === v ? 'on' : ''}" data-e="${v}">${label}<span class="n">${n}</span></button>`).join('');
   er.querySelectorAll('[data-e]').forEach(b =>
     b.addEventListener('click', () => { expFilter = b.dataset.e || null; renderFilters(); renderList(); }));
+
+  const sr = document.getElementById('statusRow');
+  const cnt = s => PEOPLE.filter(p => STATUS[p.ldap] === s).length;
+  sr.innerHTML = [
+    ['', '심사 전체', PEOPLE.length],
+    ['합격', '✅ 합격', cnt('합격')],
+    ['보류', '🤔 보류', cnt('보류')],
+    ['불합격', '❌ 불합격', cnt('불합격')],
+    ['none', '⬜ 미심사', PEOPLE.filter(p => !STATUS[p.ldap]).length]
+  ].map(([v, label, n]) =>
+    `<button class="kw ${(stFilter || '') === v ? 'on' : ''}" data-s="${v}">${label}<span class="n">${n}</span></button>`).join('');
+  sr.querySelectorAll('[data-s]').forEach(b =>
+    b.addEventListener('click', () => { stFilter = b.dataset.s || null; renderFilters(); renderList(); }));
 }
 
 function renderList(){
@@ -825,8 +760,9 @@ function renderList(){
   let ppl = [...PEOPLE].sort((a, b) => b.ts.localeCompare(a.ts));
   if (jobFilter) ppl = ppl.filter(p => (p.job || '기타') === jobFilter);
   if (expFilter) ppl = ppl.filter(p => expFilter === 're' ? p.isRe : !p.isRe);
+  if (stFilter) ppl = ppl.filter(p => stFilter === 'none' ? !STATUS[p.ldap] : STATUS[p.ldap] === stFilter);
 
-  const filters = [jobFilter, expFilter && (expFilter === 're' ? '재참여' : '신규')].filter(Boolean);
+  const filters = [jobFilter, expFilter && (expFilter === 're' ? '재참여' : '신규'), stFilter && (stFilter === 'none' ? '미심사' : stFilter)].filter(Boolean);
   reset.classList.toggle('on', filters.length > 0);
   document.getElementById('listCount').textContent =
     (filters.length ? filters.join(' · ') + ' ' : '') + ppl.length + '명';
@@ -837,10 +773,12 @@ function renderList(){
   }
   list.innerHTML = ppl.map((p, i) => `
     <div class="p" style="animation-delay:${Math.min(i * 0.05, 0.6)}s" data-idx="${p.idx}">
-      <div class="over"><span>${esc(p.company)}</span><span>·</span><span>${esc(p.dept)}</span><span>·</span><span>${esc(p.ts.slice(5))} 신청</span></div>
+      <div class="over"><span>${esc(p.company)}</span><span>·</span><span>${esc(p.dept)}</span><span>·</span><span>${esc(p.ts.slice(5))} 신청</span>${p.referral ? `<span>·</span>${refHTML(p)}` : ''}</div>
       <div class="name">${esc(p.name)}${p.ldap ? `<span class="ldap">(${esc(p.ldap)})</span>` : ''}
         <span class="jChip" style="--jc:${jobColor(p.job)}">${esc(p.job || '기타')}</span>
         ${p.isRe ? '<span class="rChip">🔁 재참여</span>' : ''}
+        ${stChipHTML(p)}
+        <span style="margin-left:auto">${stBtnsHTML(p)}</span>
       </div>
       <div class="schools">${
         p.anySchool
@@ -915,6 +853,103 @@ function renderSchoolPage(){
 }
 
 
+/* ── 부서별 심사 페이지 ── */
+function renderDeptPage(){
+  const grid = document.getElementById('deptGrid');
+  if (!grid) return;
+  const byCo = new Map();
+  PEOPLE.forEach(p => {
+    const co = shortCo(p.company) || '기타';
+    if (!byCo.has(co)) byCo.set(co, new Map());
+    const dm = byCo.get(co);
+    const d = p.dept || '부서 미기재';
+    if (!dm.has(d)) dm.set(d, []);
+    dm.get(d).push(p);
+  });
+  const cos = [...byCo.entries()]
+    .map(([co, dm]) => ({ co, dm, n: [...dm.values()].reduce((s, a) => s + a.length, 0) }))
+    .sort((a, b) => b.n - a.n || a.co.localeCompare(b.co, 'ko'));
+
+  const row = p => `
+    <div class="dRow" data-idx="${p.idx}">
+      <span class="jDot" style="--jc:${jobColorRaw(p.job)}"></span>
+      <div class="dInfo">
+        <div class="dName">${esc(p.name)}${p.ldap ? `<span class="ldap">(${esc(p.ldap)})</span>` : ''}${p.isRe ? '<span class="tg">🔁 재참여</span>' : ''}${stChipHTML(p)}</div>
+        <div class="dMeta">${esc(p.job || '기타')} · ${esc(p.ts.slice(5, 10))} 신청${p.referral ? ` · ${refHTML(p)}` : ''}</div>
+      </div>
+      ${stBtnsHTML(p)}
+    </div>`;
+
+  grid.innerHTML =
+    `<div class="sNote card">🏢 <b>공동체 → 부서</b>순으로 모았어요. 같은 부서에서 여러 명이 지원하면 <b>N명</b> 배지가 붙어요.
+      이름을 누르면 신청서 상세, 오른쪽 버튼으로 <b>합격 · 보류 · 불합격</b>을 바로 매길 수 있어요 (같은 버튼 다시 누르면 해제 · 시트 "멘토심사" 탭에 저장). 💌는 추천으로 지원한 크루예요.</div>` +
+    cos.map((c, ci) => `
+      <section class="card sCard rise" style="animation-delay:${Math.min(ci * .04, .4)}s">
+        <div class="sHead"><h3>${esc(c.co)}</h3><span class="sCount">${c.n}명</span></div>
+        ${[...c.dm.entries()]
+          .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ko'))
+          .map(([d, ppl]) => `
+            <div class="dgHead">${esc(d)}${ppl.length > 1 ? `<span class="multi">${ppl.length}명</span>` : ''}</div>
+            ${ppl.sort((a, b) => a.ts.localeCompare(b.ts)).map(row).join('')}`).join('')}
+      </section>`).join('');
+  grid.querySelectorAll('.dRow').forEach(el =>
+    el.addEventListener('click', () => openPerson(Number(el.dataset.idx))));
+}
+
+/* ── 합불 심사: 클릭 → 즉시 반영 + 백그라운드 저장 ── */
+function setStatus(ldap, status){
+  if (!STATUS_OK || !ldap) return;
+  const p = PEOPLE.find(x => x.ldap === ldap);
+  const prev = STATUS[ldap] || '';
+  const next = prev === status ? '' : status; // 같은 버튼 다시 누르면 해제
+  if (next) STATUS[ldap] = next; else delete STATUS[ldap];
+  refreshStatusUIs();
+  saveStatus(ldap, p ? p.name : '', next, prev);
+}
+
+const statusChain = {};
+function saveStatus(ldap, name, status, prevStatus){
+  statusChain[ldap] = (statusChain[ldap] || Promise.resolve())
+    .then(() => fetch(DATA_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'status', ldap, name, status })
+    }))
+    .then(res => res.json())
+    .then(out => { if (!out.ok) throw new Error(out.error || 'save failed'); })
+    .catch(err => {
+      console.warn('심사 저장 실패', err);
+      if ((STATUS[ldap] || '') === status) { /* 그 사이 또 바꾸지 않았다면 되돌리기 */
+        if (prevStatus) STATUS[ldap] = prevStatus; else delete STATUS[ldap];
+        refreshStatusUIs();
+      }
+      alert(`${name}님 심사 저장에 실패했어요. 다시 눌러 주세요.`);
+    });
+}
+
+/* 다시 그리지 않고 화면의 심사 버튼·칩·카운트만 제자리 갱신 */
+function refreshStatusUIs(){
+  document.querySelectorAll('.stBtn').forEach(b =>
+    b.classList.toggle('on', (STATUS[b.dataset.ldap] || '') === b.dataset.st));
+  document.querySelectorAll('.stChip[data-ldap]').forEach(c => {
+    const s = STATUS[c.dataset.ldap] || '';
+    c.className = 'stChip ' + (ST_CLASS[s] || '');
+    c.textContent = s ? ST_LABEL[s] : '';
+  });
+  updateStatusCounts();
+  renderFilters();
+  if (stFilter) renderList(); /* 상태 필터 중엔 목록 구성원이 달라짐 */
+  if (document.getElementById('page-board').style.display !== 'none') renderBoard();
+}
+
+/* 심사 버튼은 카드 어디에 있든 캡처 단계에서 처리 (카드 클릭=모달 열기와 충돌 방지) */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.stBtn');
+  if (!btn) return;
+  e.stopPropagation();
+  e.preventDefault();
+  setStatus(btn.dataset.ldap, btn.dataset.st);
+}, true);
+
 /* ── 배정 보드 ── */
 function renderBoard(){
   const grid = document.getElementById('boardGrid');
@@ -924,7 +959,12 @@ function renderBoard(){
 
   const byLdap = {};
   PEOPLE.forEach(p => byLdap[p.ldap] = p);
-  const pool = PEOPLE.filter(p => !ASSIGN[p.ldap]);
+  /* 합불 심사가 켜져 있으면 ✅합격·🤔보류만 배정 대상 */
+  const pool = PEOPLE.filter(p => !ASSIGN[p.ldap] && eligible(p));
+  const unassignedAll = PEOPLE.filter(p => !ASSIGN[p.ldap]);
+  const poolEmptyMsg = unassignedAll.length
+    ? `심사에서 ✅합격·🤔보류로 표시한 크루만 여기 나타나요 — [부서별 심사] 탭에서 심사해 주세요 (미배정 중 심사 대기 ${unassignedAll.filter(p => !eligible(p)).length}명)`
+    : '모두 배정됐어요 🎉';
 
   const chip = (p, schoolName) => {
     const mark = schoolName
@@ -934,11 +974,13 @@ function renderBoard(){
       : (p.almaSchool ? '🎓' : '');
     const wish = (p.almaSchool ? '모교 ' + shortName(p.almaSchool) + ' · ' : '')
       + (p.anySchool ? '학교 무관' : '희망 ' + p.schoolList.map(shortName).join(', '));
-    return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''}" draggable="${SAVE_OK}" data-ldap="${esc(p.ldap)}"
-      title="${esc(shortCo(p.company))} · ${esc(p.job || '기타')} · ${esc(wish)}">
+    const ban = !!schoolName && STATUS[p.ldap] === '불합격'; /* 배정돼 있는데 불합격 (미심사는 표시 안 함) */
+    const stMk = ban ? '⛔' : STATUS[p.ldap] === '보류' ? '🤔' : '';
+    return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''} ${ban ? 'ban' : ''}" draggable="${SAVE_OK}" data-ldap="${esc(p.ldap)}"
+      title="${esc(shortCo(p.company))} · ${esc(p.job || '기타')} · ${esc(wish)}${STATUS[p.ldap] ? ' · 심사 ' + esc(STATUS[p.ldap]) : ''}${ban ? ' — 불합격이에요. 미배정으로 옮겨 주세요' : ''}">
       <span class="jDot" style="--jc:${jobColorRaw(p.job)}"></span>
       <span class="nm2">${esc(p.name)}<span class="ld">(${esc(p.ldap)})</span></span>
-      ${p.isRe ? '<span class="mk">🔁</span>' : ''}${mark ? `<span class="mk">${mark}</span>` : ''}
+      ${p.isRe ? '<span class="mk">🔁</span>' : ''}${stMk ? `<span class="mk">${stMk}</span>` : ''}${mark ? `<span class="mk">${mark}</span>` : ''}
     </div>`;
   };
   const jobsSummary = ppl => {
@@ -950,8 +992,8 @@ function renderBoard(){
 
   grid.innerHTML =
     `<section class="bCard pool ${SEL ? 'droptarget' : ''}" data-school="">
-      <div class="bHead"><h3>🗂 미배정</h3><span class="bCnt">${pool.length}명</span></div>
-      <div class="bChips">${pool.map(p => chip(p, '')).join('') || '<span class="noneB">모두 배정됐어요 🎉</span>'}</div>
+      <div class="bHead"><h3>🗂 미배정${STATUS_OK ? ' <span style="font-size:12px;color:var(--muted);font-weight:700">✅합격·🤔보류만</span>' : ''}</h3><span class="bCnt">${pool.length}명</span></div>
+      <div class="bChips">${pool.map(p => chip(p, '')).join('') || `<span class="noneB">${poolEmptyMsg}</span>`}</div>
     </section>` +
     SCHOOLS.map(u => {
       const ppl = PEOPLE.filter(p => ASSIGN[p.ldap] === u.name)
@@ -970,7 +1012,7 @@ function renderBoard(){
 
   document.getElementById('boardHint').textContent = SEL
     ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
-    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
+    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 🤔=보류 · ⛔=합격·보류 아님 · 심사에서 ✅합격·🤔보류인 크루만 배정 대상이에요 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
 
   grid.querySelectorAll('.chipM').forEach(el => {
     el.addEventListener('click', e => {
@@ -1038,9 +1080,12 @@ function saveAssign(ldap, name, school, prevSchool){
 
 /* 자동 배정: 희망 대학 우선 · 정원 내 · 직군이 부족한 곳부터 */
 document.getElementById('autoBtn').addEventListener('click', () => {
-  const pool = PEOPLE.filter(p => !ASSIGN[p.ldap]).sort((a, b) => a.ts.localeCompare(b.ts));
-  if (!pool.length) { alert('미배정 크루가 없어요!'); return; }
-  if (!confirm(`미배정 ${pool.length}명을 자동 배정할까요?\n\n· 🎓 모교 희망자 최우선 (직군 무관) → 희망 대학 순\n· 대학별 목표 6~7명 (GIST·UNIST 5명)\n· 직군이 부족한 대학부터 채움\n\n배정 후 칩을 옮겨서 자유롭게 조정하면 돼요.`)) return;
+  const pool = PEOPLE.filter(p => !ASSIGN[p.ldap] && eligible(p)).sort((a, b) => a.ts.localeCompare(b.ts));
+  if (!pool.length) {
+    alert(STATUS_OK ? '배정할 ✅합격·🤔보류 크루가 없어요 — [부서별 심사] 탭에서 먼저 심사해 주세요!' : '미배정 크루가 없어요!');
+    return;
+  }
+  if (!confirm(`미배정 ${pool.length}명을 자동 배정할까요?${STATUS_OK ? ' (✅합격·🤔보류 크루만)' : ''}\n\n· 🎓 모교 희망자 최우선 (직군 무관) → 희망 대학 순\n· 대학별 목표 6~7명 (GIST·UNIST 5명)\n· 직군이 부족한 대학부터 채움\n\n배정 후 칩을 옮겨서 자유롭게 조정하면 돼요.`)) return;
 
   const count = {}, jobs = {};
   SCHOOLS.forEach(u => { count[u.name] = 0; jobs[u.name] = {}; });
@@ -1080,10 +1125,10 @@ document.getElementById('autoBtn').addEventListener('click', () => {
 
 /* ── 페이지 탭 ── */
 function switchPage(p){
-  document.getElementById('page-home').style.display = p === 'home' ? '' : 'none';
-  document.getElementById('page-school').style.display = p === 'school' ? '' : 'none';
-  document.getElementById('page-board').style.display = p === 'board' ? '' : 'none';
+  ['home', 'dept', 'school', 'board'].forEach(k =>
+    document.getElementById('page-' + k).style.display = p === k ? '' : 'none');
   document.querySelectorAll('.pTab').forEach(b => b.classList.toggle('on', b.dataset.page === p));
+  if (p === 'dept') renderDeptPage();
   if (p === 'school') renderSchoolPage();
   if (p === 'board') renderBoard();
 }
@@ -1105,13 +1150,17 @@ function openPerson(idx){
     <div class="mTitle">${esc(p.name)}${p.ldap ? `<span class="ldap" style="font-size:15px">(${esc(p.ldap)})</span>` : ''}
       <span class="jChip" style="--jc:${jobColor(p.job)};font-size:13px;padding:5px 13px">${esc(p.job || '기타')}</span>
       ${p.isRe ? '<span class="rChip" style="font-size:13px;padding:5px 13px">🔁 재참여</span>' : ''}
+      ${stChipHTML(p)}
     </div>
     <div class="mChips">${schoolChips}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin:-12px 0 22px">
+      <span style="font-size:12px;font-weight:800;color:var(--muted)">심사</span>${stBtnsHTML(p)}
+    </div>
     <div class="mGrid">
       <div class="mRow"><span class="k">소속</span><span class="v">${esc(p.company)} · ${esc(p.dept)}</span></div>
       <div class="mRow"><span class="k">멘토 참여 경험</span><span class="v">${p.isRe ? '있음 (재참여)' : '처음 (신규)'}</span></div>
       ${p.almaSchool ? `<div class="mRow"><span class="k">모교 희망</span><span class="v">🎓 ${esc(p.almaSchool)}</span></div>` : ''}
-      ${p.referral ? `<div class="mRow"><span class="k">추천 크루</span><span class="v">${esc(p.referral)}</span></div>` : ''}
+      ${p.referral ? `<div class="mRow"><span class="k">추천 크루</span><span class="v">💌 ${esc(p.referral)}${p.refLdap ? ` (${esc(p.refLdap)})` : ''}</span></div>` : ''}
     </div>
     ${p.motive ? `<div class="mSec"><h3>지원 동기 · 기대하는 점</h3><p>${esc(p.motive)}</p></div>` : ''}
     ${p.work ? `<div class="mSec"><h3>현재 맡고 있는 업무</h3><p>${esc(p.work)}</p></div>` : ''}
@@ -1129,13 +1178,18 @@ overlay.addEventListener('click', e => { if (e.target === overlay) closeModal();
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); if (SEL) { SEL = null; renderBoard(); } } });
 
 document.getElementById('resetBtn').addEventListener('click', () => {
-  jobFilter = null; expFilter = null;
+  jobFilter = null; expFilter = null; stFilter = null;
   renderFilters(); renderList();
 });
 
 /* ── 데이터 로드 ── */
 function renderAll(data){
   PEOPLE = prep(data.rows);
+  ASSIGN = data.assignments || {};
+  SAVE_OK = data.assignments !== undefined;
+  STATUS = data.statuses || {};
+  STATUS_OK = data.statuses !== undefined;
+  document.getElementById('statusNote').style.display = (DATA_URL && !STATUS_OK) ? '' : 'none';
   document.getElementById('updated').textContent =
     (!DATA_URL && !PEOPLE.length)
       ? '아직 시트 연동 전이에요 — mentor-apps-script.gs를 멘토 응답 시트에 설치하고, 배포 URL을 mentor.html의 DATA_URL에 붙여넣어 주세요.'
@@ -1145,8 +1199,7 @@ function renderAll(data){
   renderBars('coBars', tally(p => shortCo(p.company)));
   renderFilters();
   renderList();
-  ASSIGN = data.assignments || {};
-  SAVE_OK = data.assignments !== undefined;
+  if (document.getElementById('page-dept').style.display !== 'none') renderDeptPage();
   if (document.getElementById('page-school').style.display !== 'none') renderSchoolPage();
   if (document.getElementById('page-board').style.display !== 'none') renderBoard();
 }
