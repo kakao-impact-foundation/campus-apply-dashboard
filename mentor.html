@@ -239,6 +239,17 @@ if (top === self) location.replace('admin.html#mentor');</script>
     transition: background .2s;
   }
   .mClose:hover { background: var(--line); }
+  .mNav {
+    position: absolute; top: 20px;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--card); border: none; cursor: pointer;
+    font-size: 17px; color: var(--body); font-family: inherit;
+    transition: background .2s;
+  }
+  .mNav:hover { background: var(--line); }
+  .mNav:disabled { opacity: .3; cursor: default; background: var(--card); }
+  .mNav.prev { right: 108px; }
+  .mNav.next { right: 64px; }
   .mOver { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
   .mTitle {
     font-family: 'KakaoBigSans', Pretendard, sans-serif;
@@ -332,7 +343,8 @@ if (top === self) location.replace('admin.html#mentor');</script>
   .refB { color: var(--acc-text); font-weight: 700; }
   .noteCard { background: var(--acc-faint); font-size: 13.5px; font-weight: 600; color: var(--body); padding: 14px 20px; margin-bottom: 18px; }
 
-  /* ── 부서별 심사 ── */
+  /* ── 지원자 검토 ── */
+  .dFilters { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
   .deptGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; align-items: start; }
   @media (max-width: 420px) { .deptGrid { grid-template-columns: 1fr; } }
   .dgHead {
@@ -446,7 +458,7 @@ if (top === self) location.replace('admin.html#mentor');</script>
 
   <nav class="pageTabs rise" style="animation-delay:.04s">
     <button class="pTab on" data-page="home">신청 현황</button>
-    <button class="pTab" data-page="dept">부서별 심사</button>
+    <button class="pTab" data-page="dept">지원자 검토</button>
     <button class="pTab" data-page="school">멘토 희망 대학</button>
     <button class="pTab" data-page="board">배정 보드</button>
   </nav>
@@ -505,6 +517,11 @@ if (top === self) location.replace('admin.html#mentor');</script>
   </div><!-- /page-home -->
 
   <div id="page-dept" style="display:none">
+    <div class="dFilters rise">
+      <div class="kwRow" id="dJobRow"></div>
+      <div class="kwRow" id="dCoRow"></div>
+      <div class="kwRow" id="dStRow"></div>
+    </div>
     <div class="deptGrid" id="deptGrid"></div>
   </div>
 
@@ -790,8 +807,9 @@ function renderList(){
       }</div>
       <span class="arrow">›</span>
     </div>`).join('');
+  const order = ppl.map(p => p.idx);
   list.querySelectorAll('.p').forEach(card =>
-    card.addEventListener('click', () => openPerson(Number(card.dataset.idx))));
+    card.addEventListener('click', () => openPerson(Number(card.dataset.idx), order)));
 }
 
 /* ── 학교별 페이지 ── */
@@ -853,12 +871,61 @@ function renderSchoolPage(){
 }
 
 
-/* ── 부서별 심사 페이지 ── */
+/* ── 지원자 검토 페이지 (직군·공동체·심사 필터 + 부서별 그룹) ── */
+let dJobFilter = null, dCoFilter = null, dStFilter = null;
+
 function renderDeptPage(){
+  renderDeptFilters();
+  renderDeptGrid();
+}
+
+function renderDeptFilters(){
+  const jr = document.getElementById('dJobRow');
+  if (!jr) return;
+  const mkRow = (el, items, cur, onPick) => {
+    el.innerHTML = items
+      .filter(([v, label, n]) => v === '' || n > 0)
+      .map(([v, label, n]) =>
+        `<button class="kw ${(cur || '') === v ? 'on' : ''}" data-v="${v}">${label}<span class="n">${n}</span></button>`).join('');
+    el.querySelectorAll('.kw').forEach(b =>
+      b.addEventListener('click', () => { onPick(b.dataset.v || null); renderDeptFilters(); renderDeptGrid(); }));
+  };
+
+  const jc = k => PEOPLE.filter(p => jobKey(p.job) === k).length;
+  mkRow(jr,
+    [['', '직군 전체', PEOPLE.length], ...['개발', '기획', '디자인', 'AI', '기타'].map(k => [k, k, jc(k)])],
+    dJobFilter, v => dJobFilter = v);
+
+  const coTally = new Map();
+  PEOPLE.forEach(p => { const c = shortCo(p.company) || '기타'; coTally.set(c, (coTally.get(c) || 0) + 1); });
+  mkRow(document.getElementById('dCoRow'),
+    [['', '공동체 전체', PEOPLE.length],
+     ...[...coTally.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ko')).map(([c, n]) => [c, c, n])],
+    dCoFilter, v => dCoFilter = v);
+
+  const sc = s => PEOPLE.filter(p => STATUS[p.ldap] === s).length;
+  mkRow(document.getElementById('dStRow'),
+    [['', '심사 전체', PEOPLE.length],
+     ['none', '⬜ 미심사', PEOPLE.filter(p => !STATUS[p.ldap]).length],
+     ['합격', '✅ 합격', sc('합격')], ['보류', '🤔 보류', sc('보류')], ['불합격', '❌ 불합격', sc('불합격')]],
+    dStFilter, v => dStFilter = v);
+}
+
+function renderDeptGrid(){
   const grid = document.getElementById('deptGrid');
   if (!grid) return;
+  let base = PEOPLE;
+  if (dJobFilter) base = base.filter(p => jobKey(p.job) === dJobFilter);
+  if (dCoFilter) base = base.filter(p => (shortCo(p.company) || '기타') === dCoFilter);
+  if (dStFilter) base = base.filter(p => dStFilter === 'none' ? !STATUS[p.ldap] : STATUS[p.ldap] === dStFilter);
+
+  if (!base.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">조건에 맞는 지원자가 없어요.</div>';
+    return;
+  }
+
   const byCo = new Map();
-  PEOPLE.forEach(p => {
+  base.forEach(p => {
     const co = shortCo(p.company) || '기타';
     if (!byCo.has(co)) byCo.set(co, new Map());
     const dm = byCo.get(co);
@@ -870,7 +937,11 @@ function renderDeptPage(){
     .map(([co, dm]) => ({ co, dm, n: [...dm.values()].reduce((s, a) => s + a.length, 0) }))
     .sort((a, b) => b.n - a.n || a.co.localeCompare(b.co, 'ko'));
 
-  const row = p => `
+  /* 모달 ‹ › 넘기기용 — 화면에 보이는 순서 그대로 */
+  const order = [];
+  const row = p => {
+    order.push(p.idx);
+    return `
     <div class="dRow" data-idx="${p.idx}">
       <span class="jDot" style="--jc:${jobColorRaw(p.job)}"></span>
       <div class="dInfo">
@@ -879,10 +950,11 @@ function renderDeptPage(){
       </div>
       ${stBtnsHTML(p)}
     </div>`;
+  };
 
   grid.innerHTML =
-    `<div class="sNote card">🏢 <b>공동체 → 부서</b>순으로 모았어요. 같은 부서에서 여러 명이 지원하면 <b>N명</b> 배지가 붙어요.
-      이름을 누르면 신청서 상세, 오른쪽 버튼으로 <b>합격 · 보류 · 불합격</b>을 바로 매길 수 있어요 (같은 버튼 다시 누르면 해제 · 시트 "멘토심사" 탭에 저장). 💌는 추천으로 지원한 크루예요.</div>` +
+    `<div class="sNote card">🔍 위 필터로 거르고, <b>공동체 → 부서</b>순으로 모았어요 — 현재 <b>${base.length}명</b>. 같은 부서에서 여러 명이 지원하면 <b>N명</b> 배지가 붙어요.
+      이름을 누르면 지원서 상세(‹ › 또는 방향키로 다음 지원서), 오른쪽 버튼으로 <b>합격 · 보류 · 불합격</b>을 바로 매길 수 있어요 (같은 버튼 다시 누르면 해제 · 시트 "멘토심사" 탭에 저장). 💌는 추천으로 지원한 크루예요.</div>` +
     cos.map((c, ci) => `
       <section class="card sCard rise" style="animation-delay:${Math.min(ci * .04, .4)}s">
         <div class="sHead"><h3>${esc(c.co)}</h3><span class="sCount">${c.n}명</span></div>
@@ -893,7 +965,7 @@ function renderDeptPage(){
             ${ppl.sort((a, b) => a.ts.localeCompare(b.ts)).map(row).join('')}`).join('')}
       </section>`).join('');
   grid.querySelectorAll('.dRow').forEach(el =>
-    el.addEventListener('click', () => openPerson(Number(el.dataset.idx))));
+    el.addEventListener('click', () => openPerson(Number(el.dataset.idx), order)));
 }
 
 /* ── 합불 심사: 클릭 → 즉시 반영 + 백그라운드 저장 ── */
@@ -938,6 +1010,10 @@ function refreshStatusUIs(){
   updateStatusCounts();
   renderFilters();
   if (stFilter) renderList(); /* 상태 필터 중엔 목록 구성원이 달라짐 */
+  if (document.getElementById('page-dept').style.display !== 'none') {
+    renderDeptFilters(); /* 필터 칩의 카운트 갱신 */
+    if (dStFilter) renderDeptGrid(); /* 심사 필터 중엔 목록 구성원이 달라짐 */
+  }
   if (document.getElementById('page-board').style.display !== 'none') renderBoard();
 }
 
@@ -1137,16 +1213,29 @@ document.querySelectorAll('.pTab').forEach(b =>
 
 /* ── 상세 모달 ── */
 const overlay = document.getElementById('overlay');
-function openPerson(idx){
+let MNAV = null; // 검토 넘기기: { list: [idx…], pos } — 목록에서 열면 ‹ ›로 이동
+
+function navPerson(d){
+  if (!MNAV) return;
+  const np = MNAV.pos + d;
+  if (np < 0 || np >= MNAV.list.length) return;
+  openPerson(MNAV.list[np], MNAV.list);
+}
+
+function openPerson(idx, navList){
   const p = PEOPLE.find(x => x.idx === idx);
   if (!p) return;
+  const pos = Array.isArray(navList) ? navList.indexOf(idx) : -1;
+  MNAV = pos >= 0 ? { list: navList, pos } : null;
   const modal = document.getElementById('modal');
   const schoolChips = p.anySchool
     ? '<span class="gray">🏫 학교 무관 (매칭에 따름)</span>'
     : p.schoolList.map(s => `<span>🏫 ${esc(s)}</span>`).join('');
   modal.innerHTML = `
     <button class="mClose" aria-label="닫기">✕</button>
-    <div class="mOver"><span>${esc(p.ts)} 신청</span></div>
+    ${MNAV ? `<button class="mNav prev" aria-label="이전 지원서" ${MNAV.pos <= 0 ? 'disabled' : ''}>‹</button>
+    <button class="mNav next" aria-label="다음 지원서" ${MNAV.pos >= MNAV.list.length - 1 ? 'disabled' : ''}>›</button>` : ''}
+    <div class="mOver"><span>${esc(p.ts)} 신청</span>${MNAV ? `<span>· 검토 ${MNAV.pos + 1} / ${MNAV.list.length}</span>` : ''}</div>
     <div class="mTitle">${esc(p.name)}${p.ldap ? `<span class="ldap" style="font-size:15px">(${esc(p.ldap)})</span>` : ''}
       <span class="jChip" style="--jc:${jobColor(p.job)};font-size:13px;padding:5px 13px">${esc(p.job || '기타')}</span>
       ${p.isRe ? '<span class="rChip" style="font-size:13px;padding:5px 13px">🔁 재참여</span>' : ''}
@@ -1167,15 +1256,27 @@ function openPerson(idx){
     ${p.coach ? `<div class="mSec"><h3>코칭 가능한 전문 분야</h3><p>${esc(p.coach)}</p></div>` : ''}
     ${p.mentorExp ? `<div class="mSec"><h3>멘토링 경험</h3><p>${esc(p.mentorExp)}</p></div>` : ''}`;
   modal.querySelector('.mClose').addEventListener('click', closeModal);
+  if (MNAV) {
+    modal.querySelector('.mNav.prev').addEventListener('click', () => navPerson(-1));
+    modal.querySelector('.mNav.next').addEventListener('click', () => navPerson(1));
+  }
+  modal.scrollTop = 0;
   overlay.classList.add('vis');
   document.body.style.overflow = 'hidden';
 }
 function closeModal(){
+  MNAV = null;
   overlay.classList.remove('vis');
   document.body.style.overflow = '';
 }
 overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); if (SEL) { SEL = null; renderBoard(); } } });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); if (SEL) { SEL = null; renderBoard(); } }
+  if (overlay.classList.contains('vis')) {
+    if (e.key === 'ArrowLeft') navPerson(-1);
+    if (e.key === 'ArrowRight') navPerson(1);
+  }
+});
 
 document.getElementById('resetBtn').addEventListener('click', () => {
   jobFilter = null; expFilter = null; stFilter = null;
