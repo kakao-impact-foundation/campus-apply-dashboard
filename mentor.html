@@ -293,6 +293,7 @@ if (top === self) location.replace('admin.html#mentor');</script>
   }
   .btnAuto:hover { transform: translateY(-1px); }
   .btnAuto:disabled { opacity: .35; cursor: default; transform: none; }
+  .btnAuto.ghost { background: var(--card); color: #B3211A; }
   #boardNote { background: var(--acc-faint); font-size: 13.5px; font-weight: 600; color: var(--body); padding: 14px 20px; margin-bottom: 18px; }
   .boardGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 16px; align-items: start; }
   .bCard { background: var(--card); border-radius: 20px; padding: 16px 16px 14px; outline: 2px solid transparent; transition: outline-color .15s, background .15s; }
@@ -543,6 +544,7 @@ if (top === self) location.replace('admin.html#mentor');</script>
       <div class="kwRow" id="dCoRow"></div>
       <div class="kwRow" id="dExpRow"></div>
       <div class="kwRow" id="dStRow"></div>
+      <div class="kwRow" id="dLenRow"></div>
     </div>
     <div class="deptGrid" id="deptGrid"></div>
   </div>
@@ -557,7 +559,10 @@ if (top === self) location.replace('admin.html#mentor');</script>
         <div class="cardTitle">배정 보드</div>
         <div class="cardSub" id="boardHint"></div>
       </div>
-      <button class="btnAuto" id="autoBtn">🎲 미배정 자동 배정</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btnAuto ghost" id="resetAssignBtn">↩️ 배정 전체 리셋</button>
+        <button class="btnAuto" id="autoBtn">🎲 미배정 자동 배정</button>
+      </div>
     </div>
     <div class="card noteCard" id="boardRatio"></div>
     <div class="card" id="boardNote" style="display:none">⚠️ 배정 저장을 켜려면 <b>mentor-apps-script.gs 새 버전 배포</b>가 필요해요 — 멘토 시트 → Apps Script → 코드 교체 → 배포 관리 → ✏️ → 버전 "새 버전" → 배포 (URL은 그대로예요)</div>
@@ -708,7 +713,10 @@ function prep(rows){
     const sch = parseSchools(r.schools);
     return { ...r, schoolList: sch.list, anySchool: sch.any,
              almaSchool: matchSchool(r.alma),
-             isRe: String(r.exp || '').includes('예') };
+             isRe: String(r.exp || '').includes('예'),
+             /* 신청서 성의 지표: 서술형 4개 답변(동기·업무·코칭·멘토링경험) 글자수 합 */
+             ansLen: ['motive', 'work', 'coach', 'mentorExp']
+               .reduce((s, k) => s + String(r[k] || '').trim().length, 0) };
   }).filter(r => r.name);
   RAW_COUNT = enriched.length;
   /* 같은 LDAP 재제출은 최신 응답만 사용 (시트는 시간순이라 뒤 행이 최신) */
@@ -909,8 +917,12 @@ function renderSchoolPage(){
 }
 
 
-/* ── 지원자 검토 페이지 (직군·공동체·경험·심사 필터 + 부서별 그룹) ── */
-let dJobFilter = null, dCoFilter = null, dExpFilter = null, dStFilter = null;
+/* ── 지원자 검토 페이지 (직군·공동체·경험·심사·분량 필터 + 부서별 그룹) ── */
+let dJobFilter = null, dCoFilter = null, dExpFilter = null, dStFilter = null, dLenFilter = null;
+
+/* 짧은 신청서: 신규 지원자 중 서술형 답변 합계가 기준 미만 (재참여는 제외 — 웬만하면 합격 방침) */
+const SHORT_TH = 200;
+const isShortApp = p => !p.isRe && p.ansLen < SHORT_TH;
 
 function renderDeptPage(){
   renderDeptFilters();
@@ -954,6 +966,11 @@ function renderDeptFilters(){
      ['none', '⬜ 미심사', PEOPLE.filter(p => !STATUS[p.ldap]).length],
      ['합격', '✅ 합격', sc('합격')], ['보류', '🤔 보류', sc('보류')], ['불합격', '❌ 불합격', sc('불합격')]],
     dStFilter, v => dStFilter = v);
+
+  mkRow(document.getElementById('dLenRow'),
+    [['', '분량 전체', PEOPLE.length],
+     ['short', `📝 짧은 신청서 · 신규만`, PEOPLE.filter(isShortApp).length]],
+    dLenFilter, v => dLenFilter = v);
 }
 
 const D_PER_PAGE = 10; // 카드당 한 번에 보여줄 인원 — 카카오처럼 큰 공동체로 페이지가 길어지지 않게
@@ -968,6 +985,7 @@ function renderDeptGrid(){
   if (dExpFilter) base = base.filter(p =>
     dExpFilter === 're' ? p.isRe : dExpFilter === 'new' ? !p.isRe : !!p.almaSchool);
   if (dStFilter) base = base.filter(p => dStFilter === 'none' ? !STATUS[p.ldap] : STATUS[p.ldap] === dStFilter);
+  if (dLenFilter) base = base.filter(isShortApp);
 
   if (!base.length) {
     grid.innerHTML = '<div class="empty" style="grid-column:1/-1">조건에 맞는 지원자가 없어요.</div>';
@@ -993,15 +1011,46 @@ function renderDeptGrid(){
 
   /* 모달 ‹ › 넘기기용 — 다른 블럭에 있는 사람도 방향키로 이어서 볼 수 있게 전체 순서 유지 */
   const order = [];
-  const row = p => `
+  const row = (p, withOrg) => `
     <div class="dRow" data-idx="${p.idx}">
       <span class="jDot" style="--jc:${jobColorRaw(p.job)}"></span>
       <div class="dInfo">
         <div class="dName">${esc(p.name)}${p.ldap ? `<span class="ldap">(${esc(p.ldap)})</span>` : ''}${p.isRe ? '<span class="tg">🔁 재참여</span>' : ''}${p.almaSchool ? `<span class="tg alma">🎓 모교 ${esc(shortName(p.almaSchool))}</span>` : ''}${stChipHTML(p)}</div>
-        <div class="dMeta">${esc(p.job || '기타')} · ${esc(p.ts.slice(5, 10))} 신청${p.referral ? ` · ${refHTML(p)}` : ''}</div>
+        <div class="dMeta">${withOrg ? `<b>✍️ ${p.ansLen}자</b> · ${esc(shortCo(p.company))} · ${esc(p.dept)} · ` : ''}${esc(p.job || '기타')} · ${esc(p.ts.slice(5, 10))} 신청${p.referral ? ` · ${refHTML(p)}` : ''}</div>
       </div>
       ${stBtnsHTML(p)}
     </div>`;
+
+  /* 📝 짧은 신청서 모드 — 공동체·직군 무관 평면 리스트, 짧은 순 */
+  if (dLenFilter) {
+    const flat = [...base].sort((a, b) => a.ansLen - b.ansLen);
+    flat.forEach(p => order.push(p.idx));
+    const pages = Math.ceil(flat.length / D_PER_PAGE);
+    const pg = Math.min(Math.max(dPageByCo.__short || 0, 0), pages - 1);
+    dPageByCo.__short = pg;
+    const slice = flat.slice(pg * D_PER_PAGE, (pg + 1) * D_PER_PAGE);
+    grid.innerHTML =
+      `<div class="sNote card">📝 <b>신규</b> 지원자 중 서술형 답변 4개(지원 동기·업무·코칭 분야·멘토링 경험) 합계가 <b>${SHORT_TH}자 미만</b>인 크루예요 — 현재 <b>${flat.length}명</b>, 짧은 순 정렬 · 공동체/직군 무관 · 🔁 재참여는 제외.
+        ✍️ 글자수는 참고용이니 이름을 눌러 실제 답변을 확인하고 심사해 주세요 (모달에서 방향키로 쭉 넘기면 편해요).</div>` +
+      `<section class="card sCard" style="grid-column:1/-1">
+        <div class="sHead"><h3>📝 짧은 신청서</h3><span class="sCount">${flat.length}명</span></div>
+        ${slice.map(p => row(p, true)).join('')}
+        ${pages > 1 ? `
+        <div class="dPager">
+          <button class="pgBtn" data-co="__short" data-d="-1" ${pg === 0 ? 'disabled' : ''}>‹ 이전</button>
+          <span class="pgInfo">${pg * D_PER_PAGE + 1}–${Math.min((pg + 1) * D_PER_PAGE, flat.length)} / ${flat.length}명</span>
+          <button class="pgBtn" data-co="__short" data-d="1" ${pg >= pages - 1 ? 'disabled' : ''}>다음 ›</button>
+        </div>` : ''}
+      </section>`;
+    grid.querySelectorAll('.dRow').forEach(el =>
+      el.addEventListener('click', () => openPerson(Number(el.dataset.idx), order)));
+    grid.querySelectorAll('.pgBtn').forEach(b =>
+      b.addEventListener('click', () => {
+        dPageByCo[b.dataset.co] = (dPageByCo[b.dataset.co] || 0) + Number(b.dataset.d);
+        renderDeptGrid();
+      }));
+    return;
+  }
 
   grid.innerHTML =
     `<div class="sNote card">🔍 위 필터로 거르고, <b>공동체 → 부서</b>순으로 모았어요 — 현재 <b>${base.length}명</b>. 인원이 많은 공동체는 ${D_PER_PAGE}명씩 나눠 보여요 (카드 아래 ‹ › 버튼).
@@ -1119,6 +1168,7 @@ function renderBoard(){
   if (!grid) return;
   document.getElementById('boardNote').style.display = SAVE_OK ? 'none' : '';
   document.getElementById('autoBtn').disabled = !SAVE_OK;
+  document.getElementById('resetAssignBtn').disabled = !SAVE_OK;
 
   /* 배정 기준 요약 — 수강 인원 합계와 그에 비례한 멘토 목표 */
   const totStu = SCHOOLS.reduce((s, u) => s + u.students, 0);
@@ -1292,6 +1342,28 @@ document.getElementById('autoBtn').addEventListener('click', () => {
     saveAssign(p.ldap, p.name, pick.name, '');
   });
   renderBoard();
+});
+
+/* 배정 전체 리셋 — 시트 '멘토배정' 탭을 한 번에 비움 (Apps Script v8 필요) */
+document.getElementById('resetAssignBtn').addEventListener('click', async () => {
+  const n = Object.keys(ASSIGN).length;
+  if (!n) { alert('리셋할 배정이 없어요!'); return; }
+  if (!confirm(`배정된 ${n}명을 전부 미배정으로 되돌릴까요?\n\n· 시트 "멘토배정" 탭이 비워져요 (신청서·합불 심사는 그대로)\n· 되돌릴 수 없어요 — 다시 배정하려면 자동 배정 또는 수동으로!`)) return;
+  const btn = document.getElementById('resetAssignBtn');
+  btn.disabled = true; btn.textContent = '⏳ 리셋 중…';
+  try {
+    const res = await fetch(DATA_URL, { method: 'POST', body: JSON.stringify({ action: 'resetAssign' }) });
+    const out = await res.json();
+    if (!out.ok) throw new Error(out.error || 'reset failed');
+    ASSIGN = {};
+    renderBoard();
+  } catch (err) {
+    console.warn('배정 리셋 실패', err);
+    alert('리셋에 실패했어요 — mentor-apps-script.gs를 v8 새 버전으로 재배포했는지 확인해 주세요.');
+  } finally {
+    btn.disabled = !SAVE_OK ? true : false;
+    btn.textContent = '↩️ 배정 전체 리셋';
+  }
 });
 
 /* ── 페이지 탭 ── */

@@ -89,7 +89,7 @@ function doGet() {
     })).filter(r => r.name);
 
   const payload = {
-    v: 7, // 코드 버전 (배포 확인용 — 7: 합불 심사 저장 + 추천 크루 LDAP)
+    v: 8, // 코드 버전 (배포 확인용 — 8: 배정 전체 리셋 액션)
     updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'),
     rows: rows,
     assignments: readAssignments(ss),
@@ -168,10 +168,20 @@ function doPost(e) {
   lock.waitLock(10000);
   try {
     const body = JSON.parse(e.postData.contents);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    /* 배정 전체 리셋 — '멘토배정' 탭 데이터 행을 한 번에 비움 (대시보드 [배정 리셋] 버튼) */
+    if (body.action === 'resetAssign') {
+      const sh = ss.getSheetByName(ASSIGN_SHEET);
+      const n = sh && sh.getLastRow() > 1 ? sh.getLastRow() - 1 : 0;
+      if (n > 0) sh.deleteRows(2, n);
+      try { rebuildRoster(ss); } catch (err) { /* 명단 갱신 실패는 무시 */ }
+      return jsonOut({ ok: true, cleared: n });
+    }
+
     const ldap = String(body.ldap || '').trim().slice(0, 100);
     const name = String(body.name || '').trim().slice(0, 50);
     if (!ldap) return jsonOut({ ok: false, error: 'invalid ldap' });
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
 
     if (body.action === 'assign') {
       const school = String(body.school || '').trim().slice(0, 60);
