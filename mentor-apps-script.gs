@@ -18,8 +18,8 @@
  */
 
 const SHEET_GID = 679275159; // 응답 탭의 gid
-const ASSIGN_SHEET = '멘토배정'; // 배정 보드 저장 탭 (없으면 자동 생성)
 const STATUS_SHEET = '멘토심사'; // 합불 심사(합격·보류·불합격) 저장 탭 (없으면 자동 생성)
+/* 배정은 응답 탭 '확정 (CASE01)'/'확정 (CASE02)' 열이 유일한 저장소예요 (v11부터 — 구 '멘토배정' 탭은 안 씀) */
 const ROSTER_SHEET = '멘토 참여자 정보'; // 26-1 명단 형식의 자동 생성 탭
 const SCHOOL_COLORS = { /* [배경, 글자색] — 26-1 명단의 매칭 학교 열 톤 */
   '가천대': ['#F4CCCC', '#990000'], '경운대': ['#FCE5CD', '#B45F06'], '고려대(세종)': ['#FFF2CC', '#7F6000'],
@@ -107,10 +107,11 @@ function doGet() {
     })).filter(r => r.name);
 
   const payload = {
-    v: 10, // 코드 버전 (배포 확인용 — 10: 응답 탭 '확정'(M열) ↔ 배정 보드 양방향 연동)
+    v: 11, // 코드 버전 (배포 확인용 — 11: 확정 시나리오 CASE01/02 탭 지원)
     updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'),
     rows: rows,
-    assignments: readAssignments(ss),
+    assignments: readScenario(ss, 'CASE01'),
+    assignments2: readScenario(ss, 'CASE02'),
     statuses: readStatuses(ss)
   };
 
@@ -127,43 +128,37 @@ function doGet() {
 }
 
 /* ── 배정 보드 (대시보드 [배정 보드] 탭) ─────────────────────
- * 칩을 옮기면 doPost로 들어와 '멘토배정' 탭에 (LDAP, 이름, 배정대학) 저장돼요.
- * 같은 LDAP은 덮어쓰기, 배정대학 ''(미배정)은 행 삭제.
+ * 칩을 옮기면 doPost(assign, scen)로 들어와 응답 탭 '확정 (CASE01/02)' 열에 저장돼요.
  */
 
-function readAssignments(ss) {
+/* 시나리오별 배정 읽기 — 응답 탭 '확정 (CASE01)'/'확정 (CASE02)' 열
+ * 같은 LDAP 재제출은 뒤 행(최신)이 이기고, 학교로 인식 안 되는 값(X, 오타)은 미배정 취급 */
+function findCaseCol(header, caseKey) {
+  return header.findIndex(h => String(h).includes('확정') && String(h).toUpperCase().includes(caseKey));
+}
+function readScenario(ss, caseKey) {
   const out = {};
-  const sh = ss.getSheetByName(ASSIGN_SHEET);
-  if (sh && sh.getLastRow() >= 2) {
-    sh.getDataRange().getValues().slice(1).forEach(r => {
-      const ldap = String(r[1] || '').trim();
-      const school = String(r[3] || '').trim();
-      if (ldap && school) out[ldap] = school;
-    });
-  }
-  /* 응답 탭 '확정'(M열)이 채워져 있으면 그 값이 우선 — 같은 LDAP 재제출은 뒤 행(최신)이 이김 */
   const sheet = ss.getSheets().find(s => s.getSheetId() === SHEET_GID) || ss.getSheets()[0];
   const values = sheet.getDataRange().getValues();
   const header = values[0];
   const iLdap = header.findIndex(h => String(h).trim() === 'LDAP');
-  const iConf = header.findIndex(h => String(h).includes('확정'));
-  if (iLdap >= 0 && iConf >= 0) {
-    values.slice(1).forEach(r => {
-      const ldap = String(r[iLdap] || '').trim();
-      const full = matchSchoolFull(r[iConf]);
-      if (ldap && full) out[ldap] = full;
-    });
-  }
+  const iConf = findCaseCol(header, caseKey);
+  if (iLdap < 0 || iConf < 0) return out;
+  values.slice(1).forEach(r => {
+    const ldap = String(r[iLdap] || '').trim();
+    const full = matchSchoolFull(r[iConf]);
+    if (ldap && full) out[ldap] = full;
+  });
   return out;
 }
 
-/* 보드에서 배정을 바꾸면 응답 탭 '확정'(M열)에도 같이 기록 — 시트가 항상 진실이 되게 */
-function writeConfirmed(ss, ldap, school) {
+/* 보드에서 배정을 바꾸면 해당 시나리오의 '확정' 열에 기록 */
+function writeConfirmed(ss, ldap, school, caseKey) {
   const sheet = ss.getSheets().find(s => s.getSheetId() === SHEET_GID) || ss.getSheets()[0];
   const values = sheet.getDataRange().getValues();
   const header = values[0];
   const iLdap = header.findIndex(h => String(h).trim() === 'LDAP');
-  const iConf = header.findIndex(h => String(h).includes('확정'));
+  const iConf = findCaseCol(header, caseKey);
   if (iLdap < 0 || iConf < 0) return;
   const short = school ? (SCHOOL_SHORT[school] || school) : '';
   for (let i = values.length - 1; i >= 1; i--) { /* 뒤에서부터 = 최신 응답 행 */
@@ -191,7 +186,7 @@ function readStatuses(ss) {
   return out;
 }
 
-/* 시트 탭에서 LDAP으로 행을 찾아 upsert/삭제 (멘토배정·멘토심사 공용) */
+/* 시트 탭에서 LDAP으로 행을 찾아 upsert/삭제 (멘토심사 탭용) */
 function upsertByLdap(ss, sheetName, headerRow, ldap, values, remove) {
   let sh = ss.getSheetByName(sheetName);
   if (!sh) {
@@ -219,30 +214,14 @@ function doPost(e) {
     const body = JSON.parse(e.postData.contents);
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    /* 배정 전체 리셋 — '멘토배정' 탭 + 응답 탭 '확정'(M열)을 한 번에 비움 (대시보드 [배정 리셋] 버튼) */
-    if (body.action === 'resetAssign') {
-      const sh = ss.getSheetByName(ASSIGN_SHEET);
-      const n = sh && sh.getLastRow() > 1 ? sh.getLastRow() - 1 : 0;
-      if (n > 0) sh.deleteRows(2, n);
-      const sheet = ss.getSheets().find(s => s.getSheetId() === SHEET_GID) || ss.getSheets()[0];
-      const header = sheet.getDataRange().getValues()[0];
-      const iConf = header.findIndex(h => String(h).includes('확정'));
-      if (iConf >= 0 && sheet.getLastRow() > 1) {
-        sheet.getRange(2, iConf + 1, sheet.getLastRow() - 1, 1).clearContent();
-      }
-      try { rebuildRoster(ss); } catch (err) { /* 명단 갱신 실패는 무시 */ }
-      return jsonOut({ ok: true, cleared: n });
-    }
-
     const ldap = String(body.ldap || '').trim().slice(0, 100);
     const name = String(body.name || '').trim().slice(0, 50);
     if (!ldap) return jsonOut({ ok: false, error: 'invalid ldap' });
 
     if (body.action === 'assign') {
       const school = String(body.school || '').trim().slice(0, 60);
-      upsertByLdap(ss, ASSIGN_SHEET, ['수정시각', 'LDAP', '이름', '배정대학'],
-        ldap, [new Date(), ldap, name, school], school === '');
-      try { writeConfirmed(ss, ldap, school); } catch (err) { /* 확정 열 기록 실패는 무시 */ }
+      const caseKey = String(body.scen) === '2' ? 'CASE02' : 'CASE01';
+      writeConfirmed(ss, ldap, school, caseKey);
       try { rebuildRoster(ss); } catch (err) { /* 명단 갱신 실패는 무시 */ }
       return jsonOut({ ok: true });
     }
@@ -293,7 +272,7 @@ function rebuildRoster(ss) {
   /* 같은 LDAP 재제출은 최신 응답만 (뒤 행이 최신) */
   const byLdap = new Map();
   values.slice(1).forEach(r => { if (str(r, iName)) byLdap.set(str(r, iLdap) || str(r, iName), r); });
-  const assign = readAssignments(ss);
+  const assign = readScenario(ss, 'CASE01'); /* 명단 탭은 CASE01 기준 */
 
   /* 기존 탭의 '팀장' 열(F) 값을 LDAP 기준으로 보존 */
   const existing = ss.getSheetByName(ROSTER_SHEET);

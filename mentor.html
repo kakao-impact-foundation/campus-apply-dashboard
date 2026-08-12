@@ -293,7 +293,15 @@ if (top === self) location.replace('admin.html#mentor');</script>
   }
   .btnAuto:hover { transform: translateY(-1px); }
   .btnAuto:disabled { opacity: .35; cursor: default; transform: none; }
-  .btnAuto.ghost { background: var(--card); color: #B3211A; }
+  .scenTabs { display: inline-flex; gap: 4px; background: var(--card); border-radius: 999px; padding: 4px; }
+  .scen {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    border: none; border-radius: 999px; cursor: pointer;
+    padding: 8px 16px; font-size: 13px; font-weight: 800; color: var(--muted);
+    background: none; transition: background .15s, color .15s;
+  }
+  .scen .n { font-weight: 700; margin-left: 3px; opacity: .6; }
+  .scen.on { background: var(--acc); color: var(--ink); }
   #boardNote { background: var(--acc-faint); font-size: 13.5px; font-weight: 600; color: var(--body); padding: 14px 20px; margin-bottom: 18px; }
   .boardGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 16px; align-items: start; }
   .bCard { background: var(--card); border-radius: 20px; padding: 16px 16px 14px; outline: 2px solid transparent; transition: outline-color .15s, background .15s; }
@@ -567,8 +575,11 @@ if (top === self) location.replace('admin.html#mentor');</script>
         <div class="cardTitle">배정 보드</div>
         <div class="cardSub" id="boardHint"></div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btnAuto ghost" id="resetAssignBtn">↩️ 배정 전체 리셋</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div class="scenTabs" id="scenTabs" style="display:none">
+          <button class="scen on" data-s="1">CASE 01</button>
+          <button class="scen" data-s="2">CASE 02</button>
+        </div>
         <button class="btnAuto" id="autoBtn">🎲 미배정 자동 배정</button>
       </div>
     </div>
@@ -649,8 +660,11 @@ let expFilter = null;
 let stFilter = null;
 
 /* ── 배정 보드 상태 ── */
-let ASSIGN = {};      // ldap → 배정 대학(전체 이름)
+let ASSIGNS = { 1: {}, 2: {} }; // 시나리오별 ldap → 배정 대학 (CASE01/CASE02)
+let SCEN = sessionStorage.getItem('tfi_scen') === '2' ? '2' : '1'; // 보고 있는 시나리오
+let ASSIGN = ASSIGNS[SCEN];     // 현재 시나리오의 배정 (ASSIGNS[SCEN] 참조)
 let SAVE_OK = false;  // Apps Script가 assignments를 내려주면 저장 가능
+let SCEN2_OK = false; // v11 배포 전(assignments2 없음)엔 CASE02 탭 숨김 — CASE01 덮어쓰기 방지
 let SEL = null;       // 이동하려고 선택한 칩의 ldap
 let PENDING = 0;      // 진행 중인 저장 수 — 0일 때만 자동 갱신이 화면을 덮어써요
 
@@ -1202,7 +1216,14 @@ function renderBoard(){
   if (!grid) return;
   document.getElementById('boardNote').style.display = SAVE_OK ? 'none' : '';
   document.getElementById('autoBtn').disabled = !SAVE_OK;
-  document.getElementById('resetAssignBtn').disabled = !SAVE_OK;
+
+  /* 시나리오 탭 — CASE02 데이터(v11)가 내려올 때만 노출 */
+  const tabs = document.getElementById('scenTabs');
+  tabs.style.display = SCEN2_OK ? '' : 'none';
+  tabs.querySelectorAll('.scen').forEach(b => {
+    b.classList.toggle('on', b.dataset.s === SCEN);
+    b.innerHTML = `CASE 0${b.dataset.s}<span class="n">${Object.keys(ASSIGNS[b.dataset.s]).length}</span>`;
+  });
 
   /* 배정 기준 요약 — 수강 인원 합계와 그에 비례한 멘토 목표 */
   const totStu = SCHOOLS.reduce((s, u) => s + u.students, 0);
@@ -1275,7 +1296,7 @@ function renderBoard(){
 
   document.getElementById('boardHint').textContent = SEL
     ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
-    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 💌=추천받음 · 🧑‍🏫=멘토링 경험 (마우스 올리면 추천인·경험 내용) · 🤔=보류 · ⛔=불합격인데 배정돼 있음 ·심사에서 ✅합격·🤔보류인 크루만 배정 대상이에요 · 변경은 시트 "확정"(M열)과 "멘토배정" 탭에 바로 저장되고, 시트 M열에 직접 입력한 것도 30초 안에 자동으로 보드에 반영돼요 (심사 여부와 무관)';
+    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 💌=추천받음 · 🧑‍🏫=멘토링 경험 (마우스 올리면 추천인·경험 내용) · 🤔=보류 · ⛔=불합격인데 배정돼 있음 ·심사에서 ✅합격·🤔보류인 크루만 배정 대상이에요 · 변경은 지금 보고 있는 시나리오의 "확정 (CASE01/02)" 열에 바로 저장되고, 시트에 직접 입력한 것도 30초 안에 자동으로 보드에 반영돼요 (심사 여부와 무관 · X 등 학교가 아닌 값은 미배정 취급)';
 
   grid.querySelectorAll('.chipInfo').forEach(b =>
     b.addEventListener('click', e => {
@@ -1329,18 +1350,19 @@ function moveTo(ldap, school){
 const assignChain = {};
 function saveAssign(ldap, name, school, prevSchool){
   PENDING++;
+  const scen = SCEN; /* 저장 도중 시나리오를 바꿔도 원래 시나리오에 기록 */
   assignChain[ldap] = (assignChain[ldap] || Promise.resolve())
     .then(() => fetch(DATA_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'assign', ldap, name, school })
+      body: JSON.stringify({ action: 'assign', ldap, name, school, scen })
     }))
     .then(res => res.json())
     .then(out => { if (!out.ok) throw new Error(out.error || 'save failed'); })
     .catch(err => {
       console.warn('배정 저장 실패', err);
-      const cur = ASSIGN[ldap] || '';
-      if (cur === school) { /* 그 사이 또 옮기지 않았다면 되돌리기 */
-        if (prevSchool) ASSIGN[ldap] = prevSchool; else delete ASSIGN[ldap];
+      const A = ASSIGNS[scen];
+      if ((A[ldap] || '') === school) { /* 그 사이 또 옮기지 않았다면 되돌리기 */
+        if (prevSchool) A[ldap] = prevSchool; else delete A[ldap];
         renderBoard();
       }
       alert(`${name}님 배정 저장에 실패했어요. 다시 옮겨 주세요.`);
@@ -1393,29 +1415,16 @@ document.getElementById('autoBtn').addEventListener('click', () => {
   renderBoard();
 });
 
-/* 배정 전체 리셋 — 시트 '멘토배정' 탭을 한 번에 비움 (Apps Script v8 필요) */
-document.getElementById('resetAssignBtn').addEventListener('click', async () => {
-  const n = Object.keys(ASSIGN).length;
-  if (!n) { alert('리셋할 배정이 없어요!'); return; }
-  if (!confirm(`배정된 ${n}명을 전부 미배정으로 되돌릴까요?\n\n· 시트 "멘토배정" 탭과 응답 탭 "확정"(M열)이 비워져요 (신청서·합불 심사는 그대로)\n· 되돌릴 수 없어요 — 다시 배정하려면 자동 배정 또는 수동으로!`)) return;
-  const btn = document.getElementById('resetAssignBtn');
-  btn.disabled = true; btn.textContent = '⏳ 리셋 중…';
-  PENDING++;
-  try {
-    const res = await fetch(DATA_URL, { method: 'POST', body: JSON.stringify({ action: 'resetAssign' }) });
-    const out = await res.json();
-    if (!out.ok) throw new Error(out.error || 'reset failed');
-    ASSIGN = {};
+/* 시나리오 전환 — CASE01/02 각각 독립된 배정 (시트 M/N열) */
+document.querySelectorAll('#scenTabs .scen').forEach(b =>
+  b.addEventListener('click', () => {
+    if (SCEN === b.dataset.s) return;
+    SCEN = b.dataset.s;
+    sessionStorage.setItem('tfi_scen', SCEN);
+    ASSIGN = ASSIGNS[SCEN];
+    SEL = null;
     renderBoard();
-  } catch (err) {
-    console.warn('배정 리셋 실패', err);
-    alert('리셋에 실패했어요 — mentor-apps-script.gs를 v8 새 버전으로 재배포했는지 확인해 주세요.');
-  } finally {
-    PENDING--;
-    btn.disabled = !SAVE_OK ? true : false;
-    btn.textContent = '↩️ 배정 전체 리셋';
-  }
-});
+  }));
 
 /* ── 페이지 탭 ── */
 function switchPage(p){
@@ -1503,9 +1512,12 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 /* ── 데이터 로드 ── */
 function renderAll(data){
-  lastSnapshot = JSON.stringify({ r: data.rows, a: data.assignments, s: data.statuses });
+  lastSnapshot = JSON.stringify({ r: data.rows, a: data.assignments, a2: data.assignments2, s: data.statuses });
   PEOPLE = prep(data.rows);
-  ASSIGN = data.assignments || {};
+  ASSIGNS = { 1: data.assignments || {}, 2: data.assignments2 || {} };
+  SCEN2_OK = data.assignments2 !== undefined;
+  if (!SCEN2_OK && SCEN === '2') SCEN = '1'; /* 구버전 스크립트면 CASE01만 */
+  ASSIGN = ASSIGNS[SCEN];
   SAVE_OK = data.assignments !== undefined;
   STATUS = data.statuses || {};
   STATUS_OK = data.statuses !== undefined;
@@ -1548,7 +1560,7 @@ async function refreshData(){
   try {
     const res = await fetch(DATA_URL);
     const data = await res.json();
-    const snap = JSON.stringify({ r: data.rows, a: data.assignments, s: data.statuses });
+    const snap = JSON.stringify({ r: data.rows, a: data.assignments, a2: data.assignments2, s: data.statuses });
     if (snap === lastSnapshot) return;
     renderAll(data);
   } catch (err) { /* 다음 주기에 재시도 */ }
