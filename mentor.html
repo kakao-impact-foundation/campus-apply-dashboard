@@ -934,8 +934,9 @@ function renderSchoolPage(){
 }
 
 
-/* ── 지원자 검토 페이지 (직군·공동체·경험·심사·분량 필터 + 부서별 그룹) ── */
-let dJobFilter = null, dCoFilter = null, dExpFilter = null, dStFilter = null, dLenFilter = null;
+/* ── 지원자 검토 페이지 (직군·공동체·경험·심사·분량 필터 + 부서별 그룹) ──
+ * 각 필터 줄은 복수 선택 가능 (같은 줄 = OR, 줄끼리 = AND) · '전체' 클릭 = 그 줄 해제 */
+const dJobSel = new Set(), dCoSel = new Set(), dExpSel = new Set(), dStSel = new Set(), dLenSel = new Set();
 
 /* 짧은 신청서: 신규 지원자 중 서술형 답변 합계가 기준 미만 (재참여는 제외 — 웬만하면 합격 방침) */
 const SHORT_TH = 200;
@@ -949,13 +950,20 @@ function renderDeptPage(){
 function renderDeptFilters(){
   const jr = document.getElementById('dJobRow');
   if (!jr) return;
-  const mkRow = (el, items, cur, onPick) => {
+  const mkRow = (el, items, set) => {
     el.innerHTML = items
       .filter(([v, label, n]) => v === '' || n > 0)
       .map(([v, label, n]) =>
-        `<button class="kw ${(cur || '') === v ? 'on' : ''}" data-v="${v}">${label}<span class="n">${n}</span></button>`).join('');
+        `<button class="kw ${v === '' ? (set.size ? '' : 'on') : (set.has(v) ? 'on' : '')}" data-v="${esc(v)}">${label}<span class="n">${n}</span></button>`).join('');
     el.querySelectorAll('.kw').forEach(b =>
-      b.addEventListener('click', () => { onPick(b.dataset.v || null); dPageByCo = {}; renderDeptFilters(); renderDeptGrid(); }));
+      b.addEventListener('click', () => {
+        const v = b.dataset.v;
+        if (!v) set.clear();
+        else if (set.has(v)) set.delete(v);
+        else set.add(v);
+        dPageByCo = {};
+        renderDeptFilters(); renderDeptGrid();
+      }));
   };
 
   const jdTally = new Map();
@@ -963,33 +971,33 @@ function renderDeptFilters(){
   mkRow(jr,
     [['', '직군 전체', PEOPLE.length],
      ...[...jdTally.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ko')).map(([k, n]) => [k, k, n])],
-    dJobFilter, v => dJobFilter = v);
+    dJobSel);
 
   const coTally = new Map();
   PEOPLE.forEach(p => { const c = shortCo(p.company) || '기타'; coTally.set(c, (coTally.get(c) || 0) + 1); });
   mkRow(document.getElementById('dCoRow'),
     [['', '공동체 전체', PEOPLE.length],
      ...[...coTally.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ko')).map(([c, n]) => [c, c, n])],
-    dCoFilter, v => dCoFilter = v);
+    dCoSel);
 
   mkRow(document.getElementById('dExpRow'),
     [['', '경험 전체', PEOPLE.length],
      ['re', '🔁 재참여', PEOPLE.filter(p => p.isRe).length],
      ['new', '✨ 신규', PEOPLE.filter(p => !p.isRe).length],
      ['alma', '🎓 모교 희망', PEOPLE.filter(p => p.almaSchool).length]],
-    dExpFilter, v => dExpFilter = v);
+    dExpSel);
 
   const sc = s => PEOPLE.filter(p => STATUS[p.ldap] === s).length;
   mkRow(document.getElementById('dStRow'),
     [['', '심사 전체', PEOPLE.length],
      ['none', '⬜ 미심사', PEOPLE.filter(p => !STATUS[p.ldap]).length],
      ['합격', '✅ 합격', sc('합격')], ['보류', '🤔 보류', sc('보류')], ['불합격', '❌ 불합격', sc('불합격')]],
-    dStFilter, v => dStFilter = v);
+    dStSel);
 
   mkRow(document.getElementById('dLenRow'),
     [['', '분량 전체', PEOPLE.length],
      ['short', `📝 짧은 신청서 · 신규만`, PEOPLE.filter(isShortApp).length]],
-    dLenFilter, v => dLenFilter = v);
+    dLenSel);
 }
 
 const D_PER_PAGE = 10; // 카드당 한 번에 보여줄 인원 — 카카오처럼 큰 공동체로 페이지가 길어지지 않게
@@ -999,12 +1007,13 @@ function renderDeptGrid(){
   const grid = document.getElementById('deptGrid');
   if (!grid) return;
   let base = PEOPLE;
-  if (dJobFilter) base = base.filter(p => jobD(p) === dJobFilter);
-  if (dCoFilter) base = base.filter(p => (shortCo(p.company) || '기타') === dCoFilter);
-  if (dExpFilter) base = base.filter(p =>
-    dExpFilter === 're' ? p.isRe : dExpFilter === 'new' ? !p.isRe : !!p.almaSchool);
-  if (dStFilter) base = base.filter(p => dStFilter === 'none' ? !STATUS[p.ldap] : STATUS[p.ldap] === dStFilter);
-  if (dLenFilter) base = base.filter(isShortApp);
+  if (dJobSel.size) base = base.filter(p => dJobSel.has(jobD(p)));
+  if (dCoSel.size) base = base.filter(p => dCoSel.has(shortCo(p.company) || '기타'));
+  if (dExpSel.size) base = base.filter(p =>
+    (dExpSel.has('re') && p.isRe) || (dExpSel.has('new') && !p.isRe) || (dExpSel.has('alma') && !!p.almaSchool));
+  if (dStSel.size) base = base.filter(p =>
+    STATUS[p.ldap] ? dStSel.has(STATUS[p.ldap]) : dStSel.has('none'));
+  if (dLenSel.size) base = base.filter(isShortApp);
 
   if (!base.length) {
     grid.innerHTML = '<div class="empty" style="grid-column:1/-1">조건에 맞는 지원자가 없어요.</div>';
@@ -1041,7 +1050,7 @@ function renderDeptGrid(){
     </div>`;
 
   /* 📝 짧은 신청서 모드 — 공동체·직군 무관 평면 리스트, 짧은 순 */
-  if (dLenFilter) {
+  if (dLenSel.size) {
     const flat = [...base].sort((a, b) => a.ansLen - b.ansLen);
     flat.forEach(p => order.push(p.idx));
     const pages = Math.ceil(flat.length / D_PER_PAGE);
@@ -1072,7 +1081,7 @@ function renderDeptGrid(){
   }
 
   grid.innerHTML =
-    `<div class="sNote card">🔍 위 필터로 거르고, <b>공동체 → 부서</b>순으로 모았어요 — 현재 <b>${base.length}명</b>. 인원이 많은 공동체는 ${D_PER_PAGE}명씩 나눠 보여요 (카드 아래 ‹ › 버튼).
+    `<div class="sNote card">🔍 위 필터로 거르고 — <b>같은 줄에서 여러 개를 눌러 함께 볼 수 있어요</b> (예: 백엔드+프론트엔드, 합격+보류 · '전체'를 누르면 그 줄 해제) — <b>공동체 → 부서</b>순으로 모았어요, 현재 <b>${base.length}명</b>. 인원이 많은 공동체는 ${D_PER_PAGE}명씩 나눠 보여요 (카드 아래 ‹ › 버튼).
       이름을 누르면 지원서 상세 — 모달의 ‹ ›나 방향키는 블럭에 상관없이 전체를 이어서 넘겨요. 오른쪽 버튼으로 <b>합격 · 보류 · 불합격</b>을 바로 매길 수 있어요 (같은 버튼 다시 누르면 해제 · 시트 "멘토심사" 탭에 저장). 💌는 추천으로 지원한 크루예요.</div>` +
     cos.map((c, ci) => {
       /* 부서 그룹을 평탄화해서 블럭 단위로 자르기 */
@@ -1167,7 +1176,7 @@ function refreshStatusUIs(){
   if (stFilter) renderList(); /* 상태 필터 중엔 목록 구성원이 달라짐 */
   if (document.getElementById('page-dept').style.display !== 'none') {
     renderDeptFilters(); /* 필터 칩의 카운트 갱신 */
-    if (dStFilter) renderDeptGrid(); /* 심사 필터 중엔 목록 구성원이 달라짐 */
+    if (dStSel.size) renderDeptGrid(); /* 심사 필터 중엔 목록 구성원이 달라짐 */
   }
   if (document.getElementById('page-board').style.display !== 'none') renderBoard();
 }
