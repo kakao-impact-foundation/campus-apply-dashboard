@@ -515,7 +515,7 @@ if (top === self) location.replace('admin.html#mentor');</script>
       <div class="col">
         <section class="card rise" style="animation-delay:.12s">
           <div class="cardTitle">직군별 신청</div>
-          <div class="cardSub">해당하는 직군 응답 기준</div>
+          <div class="cardSub">상세직군 기준 (시트 J열 분류)</div>
           <div class="barRows" id="jobBars"></div>
         </section>
         <section class="card rise" style="animation-delay:.16s">
@@ -621,6 +621,15 @@ const ANY_SCHOOL = '학교 무관';
 /* ── 직군 색상 ── */
 const JOB_COLORS = { '개발': 'var(--dev)', '기획': 'var(--plan)', '디자인': 'var(--design)', '데이터': 'var(--data)', 'AI': 'var(--data)' };
 const jobColor = j => JOB_COLORS[j] || 'var(--etc)';
+
+/* 상세직군 (시트 J열, 조안 수기 분류) — 없으면 기존 직군으로 폴백 */
+const jobD = p => p.jobDetail || p.job || '기타';
+const DETAIL_COLORS = {
+  '기획': 'var(--plan)', '디자인': 'var(--design)',
+  '백엔드': 'var(--dev)', '프론트엔드': '#0EA5E9', '풀스택': '#6366F1',
+  '모바일': '#0D9488', '데이터': 'var(--data)', 'AI/ML': '#7C3AED'
+};
+const jobDColor = v => DETAIL_COLORS[v] || jobColorRaw(v);
 
 /* 폴백: 시트 연동이 실패했을 때 빈 화면 대신 안내를 띄우기 위한 빈 데이터
    (공개 레포라 소스에는 신청 데이터를 넣지 않아요 — README '개인정보 주의' 참고) */
@@ -783,7 +792,7 @@ function renderBars(elId, entries, colorOf){
 
 /* ── 신청 크루 리스트 ── */
 function renderFilters(){
-  const jobs = tally(p => p.job);
+  const jobs = tally(jobD);
   const jr = document.getElementById('jobRow');
   jr.innerHTML =
     `<button class="kw ${!jobFilter ? 'on' : ''}" data-j="">전체<span class="n">${PEOPLE.length}</span></button>` +
@@ -821,7 +830,7 @@ function renderList(){
   const list = document.getElementById('pList');
   const reset = document.getElementById('resetBtn');
   let ppl = [...PEOPLE].sort((a, b) => b.ts.localeCompare(a.ts));
-  if (jobFilter) ppl = ppl.filter(p => (p.job || '기타') === jobFilter);
+  if (jobFilter) ppl = ppl.filter(p => jobD(p) === jobFilter);
   if (expFilter) ppl = ppl.filter(p => expFilter === 're' ? p.isRe : !p.isRe);
   if (stFilter) ppl = ppl.filter(p => stFilter === 'none' ? !STATUS[p.ldap] : STATUS[p.ldap] === stFilter);
 
@@ -838,7 +847,7 @@ function renderList(){
     <div class="p" style="animation-delay:${Math.min(i * 0.05, 0.6)}s" data-idx="${p.idx}">
       <div class="over"><span>${esc(p.company)}</span><span>·</span><span>${esc(p.dept)}</span><span>·</span><span>${esc(p.ts.slice(5))} 신청</span>${p.referral ? `<span>·</span>${refHTML(p)}` : ''}</div>
       <div class="name">${esc(p.name)}${p.ldap ? `<span class="ldap">(${esc(p.ldap)})</span>` : ''}
-        <span class="jChip" style="--jc:${jobColor(p.job)}">${esc(p.job || '기타')}</span>
+        <span class="jChip" style="--jc:${jobDColor(jobD(p))}">${esc(jobD(p))}</span>
         ${p.isRe ? '<span class="rChip">🔁 재참여</span>' : ''}
         ${stChipHTML(p)}
         <span style="margin-left:auto">${stBtnsHTML(p)}</span>
@@ -875,13 +884,13 @@ function renderSchoolPage(){
 
   const jobSummary = ppl => {
     const m = new Map();
-    ppl.forEach(p => { const j = p.job || '기타'; m.set(j, (m.get(j) || 0) + 1); });
+    ppl.forEach(p => { const j = jobD(p); m.set(j, (m.get(j) || 0) + 1); });
     return [...m.entries()].sort((a, b) => b[1] - a[1])
-      .map(([j, n]) => `<span class="jChip" style="--jc:${jobColor(j)}">${esc(j)} ${n}</span>`).join('');
+      .map(([j, n]) => `<span class="jChip" style="--jc:${jobDColor(j)}">${esc(j)} ${n}</span>`).join('');
   };
   const li = p => `
     <li data-idx="${p.idx}">
-      <span class="jDot" style="--jc:${jobColor(p.job)}"></span>
+      <span class="jDot" style="--jc:${jobDColor(jobD(p))}"></span>
       <span class="nm">${esc(p.name)}${p.ldap ? `<span class="ldap">(${esc(p.ldap)})</span>` : ''} <span style="color:var(--muted);font-weight:600">· ${esc(shortCo(p.company))}</span></span>
       <span class="tg ${p.isRe ? 're' : ''}">${p.isRe ? '🔁 재참여' : '✨ 신규'}</span>
     </li>`;
@@ -941,9 +950,11 @@ function renderDeptFilters(){
       b.addEventListener('click', () => { onPick(b.dataset.v || null); dPageByCo = {}; renderDeptFilters(); renderDeptGrid(); }));
   };
 
-  const jc = k => PEOPLE.filter(p => jobKey(p.job) === k).length;
+  const jdTally = new Map();
+  PEOPLE.forEach(p => { const k = jobD(p); jdTally.set(k, (jdTally.get(k) || 0) + 1); });
   mkRow(jr,
-    [['', '직군 전체', PEOPLE.length], ...['개발', '기획', '디자인', 'AI', '기타'].map(k => [k, k, jc(k)])],
+    [['', '직군 전체', PEOPLE.length],
+     ...[...jdTally.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ko')).map(([k, n]) => [k, k, n])],
     dJobFilter, v => dJobFilter = v);
 
   const coTally = new Map();
@@ -980,7 +991,7 @@ function renderDeptGrid(){
   const grid = document.getElementById('deptGrid');
   if (!grid) return;
   let base = PEOPLE;
-  if (dJobFilter) base = base.filter(p => jobKey(p.job) === dJobFilter);
+  if (dJobFilter) base = base.filter(p => jobD(p) === dJobFilter);
   if (dCoFilter) base = base.filter(p => (shortCo(p.company) || '기타') === dCoFilter);
   if (dExpFilter) base = base.filter(p =>
     dExpFilter === 're' ? p.isRe : dExpFilter === 'new' ? !p.isRe : !!p.almaSchool);
@@ -1013,10 +1024,10 @@ function renderDeptGrid(){
   const order = [];
   const row = (p, withOrg) => `
     <div class="dRow" data-idx="${p.idx}">
-      <span class="jDot" style="--jc:${jobColorRaw(p.job)}"></span>
+      <span class="jDot" style="--jc:${jobDColor(jobD(p))}"></span>
       <div class="dInfo">
         <div class="dName">${esc(p.name)}${p.ldap ? `<span class="ldap">(${esc(p.ldap)})</span>` : ''}${p.isRe ? '<span class="tg">🔁 재참여</span>' : ''}${p.almaSchool ? `<span class="tg alma">🎓 모교 ${esc(shortName(p.almaSchool))}</span>` : ''}${stChipHTML(p)}</div>
-        <div class="dMeta">${withOrg ? `<b>✍️ ${p.ansLen}자</b> · ${esc(shortCo(p.company))} · ${esc(p.dept)} · ` : ''}${esc(p.job || '기타')} · ${esc(p.ts.slice(5, 10))} 신청${p.referral ? ` · ${refHTML(p)}` : ''}</div>
+        <div class="dMeta">${withOrg ? `<b>✍️ ${p.ansLen}자</b> · ${esc(shortCo(p.company))} · ${esc(p.dept)} · ` : ''}${esc(jobD(p))} · ${esc(p.ts.slice(5, 10))} 신청${p.referral ? ` · ${refHTML(p)}` : ''}</div>
       </div>
       ${stBtnsHTML(p)}
     </div>`;
@@ -1197,17 +1208,17 @@ function renderBoard(){
     const ban = !!schoolName && STATUS[p.ldap] === '불합격'; /* 배정돼 있는데 불합격 (미심사는 표시 안 함) */
     const stMk = ban ? '⛔' : STATUS[p.ldap] === '보류' ? '🤔' : '';
     return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''} ${ban ? 'ban' : ''}" draggable="${SAVE_OK}" data-ldap="${esc(p.ldap)}"
-      title="${esc(shortCo(p.company))} · ${esc(p.job || '기타')} · ${esc(wish)}${STATUS[p.ldap] ? ' · 심사 ' + esc(STATUS[p.ldap]) : ''}${ban ? ' — 불합격이에요. 미배정으로 옮겨 주세요' : ''}">
-      <span class="jDot" style="--jc:${jobColorRaw(p.job)}"></span>
+      title="${esc(shortCo(p.company))} · ${esc(jobD(p))} · ${esc(wish)}${STATUS[p.ldap] ? ' · 심사 ' + esc(STATUS[p.ldap]) : ''}${ban ? ' — 불합격이에요. 미배정으로 옮겨 주세요' : ''}">
+      <span class="jDot" style="--jc:${jobDColor(jobD(p))}"></span>
       <span class="nm2">${esc(p.name)}<span class="ld">(${esc(p.ldap)})</span></span>
       ${p.isRe ? '<span class="mk">🔁</span>' : ''}${stMk ? `<span class="mk">${stMk}</span>` : ''}${mark ? `<span class="mk">${mark}</span>` : ''}
     </div>`;
   };
   const jobsSummary = ppl => {
     const m = new Map();
-    ppl.forEach(p => { const k = String(p.job || '기타').trim(); m.set(k, (m.get(k) || 0) + 1); });
+    ppl.forEach(p => { const k = jobD(p); m.set(k, (m.get(k) || 0) + 1); });
     return [...m.entries()].sort((a, b) => b[1] - a[1])
-      .map(([j, n]) => `<span class="jChip" style="--jc:${jobColorRaw(j)}">${esc(j)} ${n}</span>`).join('');
+      .map(([j, n]) => `<span class="jChip" style="--jc:${jobDColor(j)}">${esc(j)} ${n}</span>`).join('');
   };
 
   grid.innerHTML =
@@ -1312,7 +1323,7 @@ document.getElementById('autoBtn').addEventListener('click', () => {
   SCHOOLS.forEach(u => { count[u.name] = 0; jobs[u.name] = {}; });
   PEOPLE.forEach(p => {
     const s = ASSIGN[p.ldap];
-    if (s && count[s] !== undefined) { count[s]++; const k = jobKey(p.job); jobs[s][k] = (jobs[s][k] || 0) + 1; }
+    if (s && count[s] !== undefined) { count[s]++; const k = jobD(p); jobs[s][k] = (jobs[s][k] || 0) + 1; }
   });
 
   /* 0순위: 모교 희망자는 직군 상관없이 모교에 먼저 배정 */
@@ -1322,12 +1333,12 @@ document.getElementById('autoBtn').addEventListener('click', () => {
     const u = SCHOOLS.find(u => u.name === p.almaSchool);
     if (!u || count[u.name] >= goalOf(u).max) { rest.push(p); return; }
     ASSIGN[p.ldap] = u.name;
-    count[u.name]++; const k = jobKey(p.job); jobs[u.name][k] = (jobs[u.name][k] || 0) + 1;
+    count[u.name]++; const k = jobD(p); jobs[u.name][k] = (jobs[u.name][k] || 0) + 1;
     saveAssign(p.ldap, p.name, u.name, '');
   });
 
   rest.forEach(p => {
-    const jk = jobKey(p.job);
+    const jk = jobD(p);
     let cands = (p.anySchool ? SCHOOLS : SCHOOLS.filter(u => p.schoolList.includes(u.name)))
       .filter(u => count[u.name] < goalOf(u).max);
     if (!cands.length) cands = SCHOOLS.filter(u => count[u.name] < goalOf(u).max);
@@ -1404,7 +1415,7 @@ function openPerson(idx, navList){
     <button class="mNav next" aria-label="다음 지원서" ${MNAV.pos >= MNAV.list.length - 1 ? 'disabled' : ''}>›</button>` : ''}
     <div class="mOver"><span>${esc(p.ts)} 신청</span>${MNAV ? `<span>· 검토 ${MNAV.pos + 1} / ${MNAV.list.length}</span>` : ''}</div>
     <div class="mTitle">${esc(p.name)}${p.ldap ? `<span class="ldap" style="font-size:15px">(${esc(p.ldap)})</span>` : ''}
-      <span class="jChip" style="--jc:${jobColor(p.job)};font-size:13px;padding:5px 13px">${esc(p.job || '기타')}</span>
+      <span class="jChip" style="--jc:${jobDColor(jobD(p))};font-size:13px;padding:5px 13px">${esc(jobD(p))}</span>
       ${p.isRe ? '<span class="rChip" style="font-size:13px;padding:5px 13px">🔁 재참여</span>' : ''}
       ${stChipHTML(p)}
     </div>
@@ -1463,7 +1474,7 @@ function renderAll(data){
       ? '아직 시트 연동 전이에요 — mentor-apps-script.gs를 멘토 응답 시트에 설치하고, 배포 URL을 mentor.html의 DATA_URL에 붙여넣어 주세요.'
       : `기준: ${data.updatedAt}` + (DATA_URL ? ' · 시트 자동 연동' : ' · 수동 저장본');
   renderHero();
-  renderBars('jobBars', tally(p => p.job), jobColor);
+  renderBars('jobBars', tally(jobD), jobDColor);
   renderBars('coBars', tally(p => shortCo(p.company)));
   renderFilters();
   renderList();

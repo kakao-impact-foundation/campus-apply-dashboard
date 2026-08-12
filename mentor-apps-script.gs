@@ -51,7 +51,8 @@ function doGet() {
   const iLdap    = header.findIndex(h => String(h).trim() === 'LDAP'); // '추천 크루 LDAP' 열과 구분
   const iCompany = col('공동체명');
   const iDept    = col('부서명');
-  const iJob     = col('직군');
+  const iJob     = col('직군'); // '해당하는 직군을 선택해주세요.' (첫 매치)
+  const iJobD    = col('상세직군'); // J열: 조안이 수기 분류한 상세직군 카테고리
   const iExp     = col('참여 경험');
   const iMotive  = col('지원 동기');
   const iWork    = col('맡고 계신 업무');
@@ -77,6 +78,7 @@ function doGet() {
       company: str(r, iCompany),
       dept: str(r, iDept),
       job: str(r, iJob),
+      jobDetail: str(r, iJobD),
       exp: str(r, iExp),
       motive: str(r, iMotive),
       work: str(r, iWork),
@@ -89,7 +91,7 @@ function doGet() {
     })).filter(r => r.name);
 
   const payload = {
-    v: 8, // 코드 버전 (배포 확인용 — 8: 배정 전체 리셋 액션)
+    v: 9, // 코드 버전 (배포 확인용 — 9: 상세직군(J열) 내보내기 + 명단 카테고리에 반영)
     updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'),
     rows: rows,
     assignments: readAssignments(ss),
@@ -229,6 +231,7 @@ function rebuildRoster(ss) {
   const iName = col('성함');
   const iLdap = header.findIndex(h => String(h).trim() === 'LDAP');
   const iCompany = col('공동체명'), iDept = col('부서명'), iJob = col('직군');
+  const iJobD = col('상세직군'); // 있으면 자동 분류 대신 이 값을 카테고리로 사용
   const iExp = col('참여 경험'), iPhone = col('핸드폰'), iEmail = col('회사 Email');
   const iAlma = col('모교 희망'), iWork = col('맡고 계신 업무'), iCoach = col('코칭 가능한');
   const str = (row, i) => i >= 0 ? String(row[i] || '').trim() : '';
@@ -267,7 +270,7 @@ function rebuildRoster(ss) {
       unassigned: !full,
       name: str(r, iName), ldap: ldap,
       company: str(r, iCompany), dept: str(r, iDept), job: str(r, iJob),
-      cat: category(str(r, iJob), str(r, iWork) + ' ' + str(r, iCoach)),
+      cat: str(r, iJobD) || category(str(r, iJob), str(r, iWork) + ' ' + str(r, iCoach)),
       phone: str(r, iPhone), email: str(r, iEmail),
       re: str(r, iExp).includes('예') ? 'O' : '',
       alma: str(r, iAlma)
