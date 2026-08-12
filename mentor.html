@@ -331,6 +331,14 @@ if (top === self) location.replace('admin.html#mentor');</script>
   .chipM .nm2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .chipM .mk { flex: 0 0 auto; font-size: 11px; margin-left: auto; }
   .chipM .mk + .mk { margin-left: 0; }
+  .chipM .chipInfo {
+    flex: 0 0 auto; margin-left: auto;
+    border: none; background: none; cursor: pointer;
+    font-size: 12px; padding: 0 0 0 3px; opacity: .4;
+    transition: opacity .15s, transform .12s;
+  }
+  .chipM .mk ~ .chipInfo { margin-left: 0; }
+  .chipM .chipInfo:hover { opacity: 1; transform: scale(1.15); }
   .noneB { font-size: 12.5px; color: var(--muted); font-weight: 600; }
 
   /* ── 합불 심사 (태그 + 버튼) ── */
@@ -1197,7 +1205,9 @@ function renderBoard(){
     ? `심사에서 ✅합격·🤔보류로 표시한 크루만 여기 나타나요 — [부서별 심사] 탭에서 심사해 주세요 (미배정 중 심사 대기 ${unassignedAll.filter(p => !eligible(p)).length}명)`
     : '모두 배정됐어요 🎉';
 
+  const boardOrder = []; /* 📄로 연 모달의 ‹ › 넘기기용 — 보드 표시 순서 그대로 */
   const chip = (p, schoolName) => {
+    boardOrder.push(p.idx);
     const mark = schoolName
       ? (p.almaSchool === schoolName ? '🎓'
         : p.anySchool ? '🤝'
@@ -1212,6 +1222,7 @@ function renderBoard(){
       <span class="jDot" style="--jc:${jobDColor(jobD(p))}"></span>
       <span class="nm2">${esc(p.name)}<span class="ld">(${esc(p.ldap)})</span></span>
       ${p.isRe ? '<span class="mk">🔁</span>' : ''}${stMk ? `<span class="mk">${stMk}</span>` : ''}${mark ? `<span class="mk">${mark}</span>` : ''}
+      <button class="chipInfo" data-idx="${p.idx}" title="지원서 보기" aria-label="지원서 보기">📄</button>
     </div>`;
   };
   const jobsSummary = ppl => {
@@ -1246,6 +1257,11 @@ function renderBoard(){
     ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
     : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 🤔=보류 · ⛔=불합격인데 배정돼 있음 · 심사에서 ✅합격·🤔보류인 크루만 배정 대상이에요 · 변경은 시트 "확정"(M열)과 "멘토배정" 탭에 바로 저장되고, 시트 M열에 직접 입력해도 새로고침하면 보드에 반영돼요';
 
+  grid.querySelectorAll('.chipInfo').forEach(b =>
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      openPerson(Number(b.dataset.idx), boardOrder);
+    }));
   grid.querySelectorAll('.chipM').forEach(el => {
     el.addEventListener('click', e => {
       e.stopPropagation();
