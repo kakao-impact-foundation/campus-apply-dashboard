@@ -1244,7 +1244,7 @@ function renderBoard(){
 
   document.getElementById('boardHint').textContent = SEL
     ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
-    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 🤔=보류 · ⛔=불합격인데 배정돼 있음 · 심사에서 ✅합격·🤔보류인 크루만 배정 대상이에요 · 변경은 시트 "멘토배정" 탭에 바로 저장돼요';
+    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 🤔=보류 · ⛔=불합격인데 배정돼 있음 · 심사에서 ✅합격·🤔보류인 크루만 배정 대상이에요 · 변경은 시트 "확정"(M열)과 "멘토배정" 탭에 바로 저장되고, 시트 M열에 직접 입력해도 새로고침하면 보드에 반영돼요';
 
   grid.querySelectorAll('.chipM').forEach(el => {
     el.addEventListener('click', e => {
@@ -1359,7 +1359,7 @@ document.getElementById('autoBtn').addEventListener('click', () => {
 document.getElementById('resetAssignBtn').addEventListener('click', async () => {
   const n = Object.keys(ASSIGN).length;
   if (!n) { alert('리셋할 배정이 없어요!'); return; }
-  if (!confirm(`배정된 ${n}명을 전부 미배정으로 되돌릴까요?\n\n· 시트 "멘토배정" 탭이 비워져요 (신청서·합불 심사는 그대로)\n· 되돌릴 수 없어요 — 다시 배정하려면 자동 배정 또는 수동으로!`)) return;
+  if (!confirm(`배정된 ${n}명을 전부 미배정으로 되돌릴까요?\n\n· 시트 "멘토배정" 탭과 응답 탭 "확정"(M열)이 비워져요 (신청서·합불 심사는 그대로)\n· 되돌릴 수 없어요 — 다시 배정하려면 자동 배정 또는 수동으로!`)) return;
   const btn = document.getElementById('resetAssignBtn');
   btn.disabled = true; btn.textContent = '⏳ 리셋 중…';
   try {

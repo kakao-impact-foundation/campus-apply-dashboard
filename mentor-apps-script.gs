@@ -34,6 +34,22 @@ const SCHOOL_SHORT = {
   '서울시립대학교': '시립대', '서울여자대학교': '서울여대', '한라대학교': '한라대',
   '광주과학기술원 GIST': 'GIST', '한국과학기술원 KAIST': 'KAIST', '울산과학기술원 UNIST': 'UNIST'
 };
+/* 응답 탭 '확정'(M열)에 적는 자유 표기(서울대, 서울시립대, KAIST…)를 정식 학교명으로 매칭 */
+const SCHOOL_KEYS = {
+  '서울시립대학교': ['시립'], '서울여자대학교': ['서울여자', '서울여대'],
+  '서울대학교': ['서울대학교', '서울대'], '가천대학교': ['가천'], '경운대학교': ['경운'],
+  '고려대학교 세종캠퍼스': ['고려'], '동국대학교': ['동국'], '부산외국어대학교': ['부산외'],
+  '한라대학교': ['한라'], '광주과학기술원 GIST': ['GIST', '지스트', '광주과학'],
+  '한국과학기술원 KAIST': ['KAIST', '카이스트', '한국과학'], '울산과학기술원 UNIST': ['UNIST', '유니스트', '울산과학']
+};
+function matchSchoolFull(txt) {
+  txt = String(txt || '').trim();
+  if (!txt) return '';
+  for (const full in SCHOOL_KEYS) {
+    if (SCHOOL_KEYS[full].some(k => txt.indexOf(k) !== -1)) return full;
+  }
+  return ''; // 매칭 안 되는 표기는 무시 (보드에 카드가 없어서 표시 불가)
+}
 
 // GitHub Pages 공개 배포용이라 연락처(전화·이메일)는 내보내지 않아요.
 // 연락처가 필요하면 시트에서 직접 확인하세요.
@@ -91,7 +107,7 @@ function doGet() {
     })).filter(r => r.name);
 
   const payload = {
-    v: 9, // 코드 버전 (배포 확인용 — 9: 상세직군(J열) 내보내기 + 명단 카테고리에 반영)
+    v: 10, // 코드 버전 (배포 확인용 — 10: 응답 탭 '확정'(M열) ↔ 배정 보드 양방향 연동)
     updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'),
     rows: rows,
     assignments: readAssignments(ss),
@@ -116,15 +132,46 @@ function doGet() {
  */
 
 function readAssignments(ss) {
-  const sh = ss.getSheetByName(ASSIGN_SHEET);
   const out = {};
-  if (!sh || sh.getLastRow() < 2) return out;
-  sh.getDataRange().getValues().slice(1).forEach(r => {
-    const ldap = String(r[1] || '').trim();
-    const school = String(r[3] || '').trim();
-    if (ldap && school) out[ldap] = school;
-  });
+  const sh = ss.getSheetByName(ASSIGN_SHEET);
+  if (sh && sh.getLastRow() >= 2) {
+    sh.getDataRange().getValues().slice(1).forEach(r => {
+      const ldap = String(r[1] || '').trim();
+      const school = String(r[3] || '').trim();
+      if (ldap && school) out[ldap] = school;
+    });
+  }
+  /* 응답 탭 '확정'(M열)이 채워져 있으면 그 값이 우선 — 같은 LDAP 재제출은 뒤 행(최신)이 이김 */
+  const sheet = ss.getSheets().find(s => s.getSheetId() === SHEET_GID) || ss.getSheets()[0];
+  const values = sheet.getDataRange().getValues();
+  const header = values[0];
+  const iLdap = header.findIndex(h => String(h).trim() === 'LDAP');
+  const iConf = header.findIndex(h => String(h).includes('확정'));
+  if (iLdap >= 0 && iConf >= 0) {
+    values.slice(1).forEach(r => {
+      const ldap = String(r[iLdap] || '').trim();
+      const full = matchSchoolFull(r[iConf]);
+      if (ldap && full) out[ldap] = full;
+    });
+  }
   return out;
+}
+
+/* 보드에서 배정을 바꾸면 응답 탭 '확정'(M열)에도 같이 기록 — 시트가 항상 진실이 되게 */
+function writeConfirmed(ss, ldap, school) {
+  const sheet = ss.getSheets().find(s => s.getSheetId() === SHEET_GID) || ss.getSheets()[0];
+  const values = sheet.getDataRange().getValues();
+  const header = values[0];
+  const iLdap = header.findIndex(h => String(h).trim() === 'LDAP');
+  const iConf = header.findIndex(h => String(h).includes('확정'));
+  if (iLdap < 0 || iConf < 0) return;
+  const short = school ? (SCHOOL_SHORT[school] || school) : '';
+  for (let i = values.length - 1; i >= 1; i--) { /* 뒤에서부터 = 최신 응답 행 */
+    if (String(values[i][iLdap] || '').trim() === ldap) {
+      sheet.getRange(i + 1, iConf + 1).setValue(short);
+      break;
+    }
+  }
 }
 
 /* ── 합불 심사 (대시보드 심사 버튼) ─────────────────────────
@@ -172,11 +219,17 @@ function doPost(e) {
     const body = JSON.parse(e.postData.contents);
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    /* 배정 전체 리셋 — '멘토배정' 탭 데이터 행을 한 번에 비움 (대시보드 [배정 리셋] 버튼) */
+    /* 배정 전체 리셋 — '멘토배정' 탭 + 응답 탭 '확정'(M열)을 한 번에 비움 (대시보드 [배정 리셋] 버튼) */
     if (body.action === 'resetAssign') {
       const sh = ss.getSheetByName(ASSIGN_SHEET);
       const n = sh && sh.getLastRow() > 1 ? sh.getLastRow() - 1 : 0;
       if (n > 0) sh.deleteRows(2, n);
+      const sheet = ss.getSheets().find(s => s.getSheetId() === SHEET_GID) || ss.getSheets()[0];
+      const header = sheet.getDataRange().getValues()[0];
+      const iConf = header.findIndex(h => String(h).includes('확정'));
+      if (iConf >= 0 && sheet.getLastRow() > 1) {
+        sheet.getRange(2, iConf + 1, sheet.getLastRow() - 1, 1).clearContent();
+      }
       try { rebuildRoster(ss); } catch (err) { /* 명단 갱신 실패는 무시 */ }
       return jsonOut({ ok: true, cleared: n });
     }
@@ -189,6 +242,7 @@ function doPost(e) {
       const school = String(body.school || '').trim().slice(0, 60);
       upsertByLdap(ss, ASSIGN_SHEET, ['수정시각', 'LDAP', '이름', '배정대학'],
         ldap, [new Date(), ldap, name, school], school === '');
+      try { writeConfirmed(ss, ldap, school); } catch (err) { /* 확정 열 기록 실패는 무시 */ }
       try { rebuildRoster(ss); } catch (err) { /* 명단 갱신 실패는 무시 */ }
       return jsonOut({ ok: true });
     }
