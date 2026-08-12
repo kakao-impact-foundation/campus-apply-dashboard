@@ -732,6 +732,9 @@ function prep(rows){
     return { ...r, schoolList: sch.list, anySchool: sch.any,
              almaSchool: matchSchool(r.alma),
              isRe: String(r.exp || '').includes('예'),
+             /* 멘토링 경험 기재 여부 — '없음'류 형식 답변은 제외 */
+             hasMentorExp: !!String(r.mentorExp || '').trim()
+               && !/^(없음|없습니다|x|X|\.|-|해당 ?없음).{0,3}$/.test(String(r.mentorExp).trim()),
              /* 신청서 성의 지표: 서술형 4개 답변(동기·업무·코칭·멘토링경험) 글자수 합 */
              ansLen: ['motive', 'work', 'coach', 'mentorExp']
                .reduce((s, k) => s + String(r[k] || '').trim().length, 0) };
@@ -1229,11 +1232,16 @@ function renderBoard(){
       + (p.anySchool ? '학교 무관' : '희망 ' + p.schoolList.map(shortName).join(', '));
     const ban = !!schoolName && STATUS[p.ldap] === '불합격'; /* 배정돼 있는데 불합격 (미심사는 표시 안 함) */
     const stMk = ban ? '⛔' : STATUS[p.ldap] === '보류' ? '🤔' : '';
+    const tip = `${esc(shortCo(p.company))} · ${esc(jobD(p))} · ${esc(wish)}`
+      + (p.referral ? ` · 💌 ${esc(p.referral)}${p.refLdap ? ` (${esc(p.refLdap)})` : ''} 추천` : '')
+      + (p.hasMentorExp ? ` · 🧑‍🏫 멘토링 경험: ${esc(String(p.mentorExp).trim().slice(0, 60))}…` : '')
+      + (STATUS[p.ldap] ? ' · 심사 ' + esc(STATUS[p.ldap]) : '')
+      + (ban ? ' — 불합격이에요. 미배정으로 옮겨 주세요' : '');
     return `<div class="chipM ${SEL === p.ldap ? 'sel' : ''} ${ban ? 'ban' : ''}" draggable="${SAVE_OK}" data-ldap="${esc(p.ldap)}"
-      title="${esc(shortCo(p.company))} · ${esc(jobD(p))} · ${esc(wish)}${STATUS[p.ldap] ? ' · 심사 ' + esc(STATUS[p.ldap]) : ''}${ban ? ' — 불합격이에요. 미배정으로 옮겨 주세요' : ''}">
+      title="${tip}">
       <span class="jDot" style="--jc:${jobDColor(jobD(p))}"></span>
       <span class="nm2">${esc(p.name)}<span class="ld">(${esc(p.ldap)})</span></span>
-      ${p.isRe ? '<span class="mk">🔁</span>' : ''}${stMk ? `<span class="mk">${stMk}</span>` : ''}${mark ? `<span class="mk">${mark}</span>` : ''}
+      ${p.isRe ? '<span class="mk">🔁</span>' : ''}${p.referral ? '<span class="mk">💌</span>' : ''}${p.hasMentorExp ? '<span class="mk">🧑‍🏫</span>' : ''}${stMk ? `<span class="mk">${stMk}</span>` : ''}${mark ? `<span class="mk">${mark}</span>` : ''}
       <button class="chipInfo" data-idx="${p.idx}" title="지원서 보기" aria-label="지원서 보기">📄</button>
     </div>`;
   };
@@ -1267,7 +1275,7 @@ function renderBoard(){
 
   document.getElementById('boardHint').textContent = SEL
     ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
-    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 🤔=보류 · ⛔=불합격인데 배정돼 있음 · 심사에서 ✅합격·🤔보류인 크루만 배정 대상이에요 · 변경은 시트 "확정"(M열)과 "멘토배정" 탭에 바로 저장되고, 시트 M열에 직접 입력한 것도 30초 안에 자동으로 보드에 반영돼요 (심사 여부와 무관)';
+    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 💌=추천받음 · 🧑‍🏫=멘토링 경험 (마우스 올리면 추천인·경험 내용) · 🤔=보류 · ⛔=불합격인데 배정돼 있음 ·심사에서 ✅합격·🤔보류인 크루만 배정 대상이에요 · 변경은 시트 "확정"(M열)과 "멘토배정" 탭에 바로 저장되고, 시트 M열에 직접 입력한 것도 30초 안에 자동으로 보드에 반영돼요 (심사 여부와 무관)';
 
   grid.querySelectorAll('.chipInfo').forEach(b =>
     b.addEventListener('click', e => {
