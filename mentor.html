@@ -652,6 +652,7 @@ let stFilter = null;
 let ASSIGN = {};      // ldap → 배정 대학(전체 이름)
 let SAVE_OK = false;  // Apps Script가 assignments를 내려주면 저장 가능
 let SEL = null;       // 이동하려고 선택한 칩의 ldap
+let PENDING = 0;      // 진행 중인 저장 수 — 0일 때만 자동 갱신이 화면을 덮어써요
 
 /* ── 합불 심사 상태 ── */
 let STATUS = {};       // ldap → '합격' | '보류' | '불합격'
@@ -1145,6 +1146,7 @@ function setStatus(ldap, status){
 
 const statusChain = {};
 function saveStatus(ldap, name, status, prevStatus){
+  PENDING++;
   statusChain[ldap] = (statusChain[ldap] || Promise.resolve())
     .then(() => fetch(DATA_URL, {
       method: 'POST',
@@ -1159,7 +1161,8 @@ function saveStatus(ldap, name, status, prevStatus){
         refreshStatusUIs();
       }
       alert(`${name}님 심사 저장에 실패했어요. 다시 눌러 주세요.`);
-    });
+    })
+    .finally(() => PENDING--);
 }
 
 /* 다시 그리지 않고 화면의 심사 버튼·칩·카운트만 제자리 갱신 */
@@ -1264,7 +1267,7 @@ function renderBoard(){
 
   document.getElementById('boardHint').textContent = SEL
     ? `➡️ ${(byLdap[SEL] || {}).name || ''}님을 옮길 카드를 클릭하세요 (같은 칩 다시 클릭·ESC = 취소)`
-    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 🤔=보류 · ⛔=불합격인데 배정돼 있음 · 심사에서 ✅합격·🤔보류인 크루만 배정 대상이에요 · 변경은 시트 "확정"(M열)과 "멘토배정" 탭에 바로 저장되고, 시트 M열에 직접 입력해도 새로고침하면 보드에 반영돼요';
+    : '칩을 드래그해서 대학 카드에 놓거나, 클릭해 선택 → 카드 클릭으로 옮겨요 · 🎓=모교 배정 · ✅=희망 대학 배정 · 🤝=학교 무관 · ⚠️=희망 외 대학 · 🤔=보류 · ⛔=불합격인데 배정돼 있음 · 심사에서 ✅합격·🤔보류인 크루만 배정 대상이에요 · 변경은 시트 "확정"(M열)과 "멘토배정" 탭에 바로 저장되고, 시트 M열에 직접 입력한 것도 30초 안에 자동으로 보드에 반영돼요 (심사 여부와 무관)';
 
   grid.querySelectorAll('.chipInfo').forEach(b =>
     b.addEventListener('click', e => {
@@ -1317,6 +1320,7 @@ function moveTo(ldap, school){
 /* 저장은 백그라운드로 — 화면 즉시 반영, 같은 사람 요청은 순서 보장 */
 const assignChain = {};
 function saveAssign(ldap, name, school, prevSchool){
+  PENDING++;
   assignChain[ldap] = (assignChain[ldap] || Promise.resolve())
     .then(() => fetch(DATA_URL, {
       method: 'POST',
@@ -1332,7 +1336,8 @@ function saveAssign(ldap, name, school, prevSchool){
         renderBoard();
       }
       alert(`${name}님 배정 저장에 실패했어요. 다시 옮겨 주세요.`);
-    });
+    })
+    .finally(() => PENDING--);
 }
 
 /* 자동 배정: 희망 대학 우선 · 정원 내 · 직군이 부족한 곳부터 */
@@ -1387,6 +1392,7 @@ document.getElementById('resetAssignBtn').addEventListener('click', async () => 
   if (!confirm(`배정된 ${n}명을 전부 미배정으로 되돌릴까요?\n\n· 시트 "멘토배정" 탭과 응답 탭 "확정"(M열)이 비워져요 (신청서·합불 심사는 그대로)\n· 되돌릴 수 없어요 — 다시 배정하려면 자동 배정 또는 수동으로!`)) return;
   const btn = document.getElementById('resetAssignBtn');
   btn.disabled = true; btn.textContent = '⏳ 리셋 중…';
+  PENDING++;
   try {
     const res = await fetch(DATA_URL, { method: 'POST', body: JSON.stringify({ action: 'resetAssign' }) });
     const out = await res.json();
@@ -1397,6 +1403,7 @@ document.getElementById('resetAssignBtn').addEventListener('click', async () => 
     console.warn('배정 리셋 실패', err);
     alert('리셋에 실패했어요 — mentor-apps-script.gs를 v8 새 버전으로 재배포했는지 확인해 주세요.');
   } finally {
+    PENDING--;
     btn.disabled = !SAVE_OK ? true : false;
     btn.textContent = '↩️ 배정 전체 리셋';
   }
@@ -1488,6 +1495,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 /* ── 데이터 로드 ── */
 function renderAll(data){
+  lastSnapshot = JSON.stringify({ r: data.rows, a: data.assignments, s: data.statuses });
   PEOPLE = prep(data.rows);
   ASSIGN = data.assignments || {};
   SAVE_OK = data.assignments !== undefined;
@@ -1521,6 +1529,25 @@ async function load(){
   }
   renderAll(SNAPSHOT);
 }
+
+/* ── 자동 갱신: 시트 변경(M열 확정 입력 등)을 30초마다 감지해 화면에 반영 ──
+ * 저장 진행 중·칩 선택/드래그 중·모달 열람 중·탭 백그라운드일 땐 건너뛰어요. */
+let lastSnapshot = '';
+async function refreshData(){
+  if (!DATA_URL || document.hidden || PENDING > 0 || SEL) return;
+  if (overlay.classList.contains('vis')) return;
+  if (document.querySelector('.chipM.dragging')) return;
+  try {
+    const res = await fetch(DATA_URL);
+    const data = await res.json();
+    const snap = JSON.stringify({ r: data.rows, a: data.assignments, s: data.statuses });
+    if (snap === lastSnapshot) return;
+    renderAll(data);
+  } catch (err) { /* 다음 주기에 재시도 */ }
+}
+setInterval(refreshData, 30000);
+/* 백그라운드 탭에 있다가 돌아오면 바로 한 번 갱신 */
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshData(); });
 
 /* ── 비밀번호 게이트 (index.html과 동일 · 한 번 입력하면 둘 다 열려요) ── */
 const GATE_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
