@@ -866,7 +866,7 @@ async function load(){
       return;
     } catch (err) { console.warn('시트 연동 실패', err); }
   }
-  /* 연동 전 로컬 미리보기용 스냅샷 (레포에는 없음 — .gitignore) */
+  /* 연동 전 폴백: 마지막 저장 스냅샷 (연락처 마스킹본 — "대시보드 스냅샷 업데이트해줘"로 갱신) */
   try {
     const res = await fetch('campus-snapshot.json');
     if (res.ok) { renderAll(await res.json()); return; }
