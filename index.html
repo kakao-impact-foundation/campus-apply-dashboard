@@ -131,29 +131,6 @@ if (top === self) location.replace('admin.html#innovator');</script>
   .pTab:hover { transform: translateY(-1px); }
   .pTab.on { background: var(--ink); color: #fff; }
 
-  /* ── 학교별 매칭 페이지 ── */
-  .matchGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-items: start; }
-  .mCard .mHead { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .mCard .mHead h3 { font-family: 'KakaoBigSans', Pretendard, sans-serif; font-size: 18px; font-weight: 800; }
-  .mCard .mCount { font-size: 13px; color: var(--muted); font-weight: 800; }
-  .gDot { width: 10px; height: 10px; border-radius: 50%; background: var(--gc, var(--muted)); flex: 0 0 auto; }
-  .mUnis { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-  .mUnis span { font-size: 12px; font-weight: 700; color: var(--body); background: var(--white); border-radius: 999px; padding: 4px 10px; }
-  .mList { list-style: none; display: flex; flex-direction: column; gap: 9px; }
-  .mList li { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--ink); cursor: pointer; animation: rise .35s ease both; }
-  .mList li .gDot { width: 7px; height: 7px; }
-  .mList li:hover .mName { color: var(--pink-text); }
-  .mList li .mName {
-    flex: 1; min-width: 0;
-    font-family: inherit; font-size: 11.5px; font-weight: 600;
-    line-height: 1.45; letter-spacing: -0.01em;
-    margin: 0; padding: 0;
-    overflow-wrap: anywhere;
-  }
-  .fChip { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 2px 9px; background: var(--white); color: var(--muted); flex: 0 0 auto; }
-  .fChip.ok { background: var(--ink); color: #fff; }
-  .mCard .none { font-size: 14px; color: var(--muted); }
-  .mNote { grid-column: 1 / -1; font-size: 14px; color: var(--body); font-weight: 600; line-height: 1.7; }
 
   /* ── 최종 배정표 페이지 ── */
   .faHead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -621,7 +598,6 @@ if (top === self) location.replace('admin.html#innovator');</script>
   <nav class="pageTabs rise" style="animation-delay:.04s">
     <button class="pTab on" data-page="home">신청 현황</button>
     <button class="pTab" data-page="final">최종 배정표</button>
-    <button class="pTab" data-page="match">학교별 매칭</button>
     <button class="pTab" data-page="compare">전체 vs 확정</button>
   </nav>
 
@@ -687,10 +663,6 @@ if (top === self) location.replace('admin.html#innovator');</script>
     <div class="faLegend" id="faLegend"></div>
     <div id="faGroups"></div>
     <div class="faNote">배정 확정본이에요 — 조직을 누르면 신청서 전체를 볼 수 있어요 · 같은 조직이 여러 학교에 배정된 경우도 있어요</div>
-  </div>
-
-  <div id="page-match" style="display:none">
-    <div class="matchGrid" id="matchGrid"></div>
   </div>
 
   <div id="page-compare" style="display:none">
@@ -1345,57 +1317,6 @@ function renderFinalListFilter(){
     }));
 }
 
-/* ── 학교별 매칭 페이지 (Z열 '학교 매칭' 기준, 시트 자동 연동) ── */
-function renderMatchPage(){
-  const grid = document.getElementById('matchGrid');
-  if (!grid) return;
-  if (!ORGS.some(o => o.match)) {
-    grid.innerHTML = `<div class="card mNote">🏫 학교 매칭(Z열) 데이터가 아직 안 내려왔어요.<br/>
-      시트 → 확장 프로그램 → Apps Script에서 최신 코드로 새 버전 배포하면 자동으로 나타나요.</div>`;
-    return;
-  }
-  const byGroup = { A: [], B: [], C: [] };
-  const labels = { A: 'A(서울)', B: 'B(경기/충청/전라)', C: 'C(강원/경상)' };
-  ORGS.forEach(o => {
-    const m = String(o.match || '').trim();
-    const g = m.charAt(0).toUpperCase();
-    if (!byGroup[g]) return;
-    labels[g] = m;
-    /* 최종 구분이 확정·보류인 조직만 (X·빈값은 매칭이 남아 있어도 제외) */
-    if (/확정|보류/.test(o.final || '')) byGroup[g].push(o);
-  });
-  const unassigned = ORGS.filter(o => /확정|보류/.test(o.final || '') && !String(o.match || '').trim());
-
-  const orgLi = (o, dot) => `
-    <li data-key="${esc(o.key)}">
-      <span class="gDot"${dot ? ` style="background:${dot}"` : ''}></span>
-      <span class="mName">${esc(o.org)}</span>
-      ${o.cat && o.cat !== '-' ? `<span class="fChip">${esc(o.cat)}</span>` : ''}
-      ${o.final ? `<span class="fChip ${o.final.includes('확정') ? 'ok' : ''}">${esc(o.final)}</span>` : ''}
-    </li>`;
-
-  grid.innerHTML = Object.entries(byGroup).map(([g, orgs]) => {
-    const nOk = orgs.filter(o => (o.final || '').includes('확정')).length;
-    const nHold = orgs.length - nOk;
-    return `
-    <section class="card mCard rise" style="--gc:${UNI_GROUPS[g].color}">
-      <div class="mHead"><span class="gDot"></span><h3>${esc(labels[g])}</h3><span class="mCount">확정 ${nOk}팀${nHold ? ` · 보류 ${nHold}` : ''}</span></div>
-      <div class="mUnis">${UNIVERSITIES.filter(u => u.group === g).map(u => `<span>🏫 ${esc(u.name)}</span>`).join('')}</div>
-      ${orgs.length
-        ? `<ul class="mList">${orgs.map((o, i) => orgLi(o)).join('')}</ul>`
-        : '<div class="none">아직 매칭된 조직이 없어요.</div>'}
-    </section>`;
-  }).join('')
-    + (unassigned.length ? `
-    <section class="card mCard rise">
-      <div class="mHead"><span class="gDot"></span><h3>미배정</h3><span class="mCount">${unassigned.length}팀</span></div>
-      <div class="mUnis"><span>확정·보류인데 아직 학교 매칭이 비어 있는 조직</span></div>
-      <ul class="mList">${unassigned.map(o => orgLi(o)).join('')}</ul>
-    </section>` : '');
-  grid.querySelectorAll('li[data-key]').forEach(li =>
-    li.addEventListener('click', () => openOrg(li.dataset.key)));
-}
-
 /* ── 최종 배정표 페이지 (FINAL_ASSIGN 확정본 기준 · 시트 연동과 무관하게 항상 보여요) ── */
 /* 배정표에 적은 이름 → 시트의 조직 찾기 (별표·괄호 표기 차이 무시) */
 function faNorm(s){
@@ -1449,18 +1370,16 @@ function renderFinalTable(){
     </section>`).join('');
 
   box.querySelectorAll('.faRow[data-key]').forEach(el =>
-    el.addEventListener('click', () => openOrg(el.dataset.key)));
+    el.addEventListener('click', () => openOrg(el.dataset.key, { noRate: true })));
 }
 
 /* ── 페이지 탭 전환 ── */
 function switchPage(p){
   document.getElementById('page-home').style.display = p === 'home' ? '' : 'none';
   document.getElementById('page-final').style.display = p === 'final' ? '' : 'none';
-  document.getElementById('page-match').style.display = p === 'match' ? '' : 'none';
   document.getElementById('page-compare').style.display = p === 'compare' ? '' : 'none';
   document.querySelectorAll('.pTab').forEach(b => b.classList.toggle('on', b.dataset.page === p));
   if (p === 'final') renderFinalTable();
-  if (p === 'match') renderMatchPage();
   if (p === 'compare') initCmpCharts();
 }
 document.querySelectorAll('.pTab').forEach(b =>
@@ -1550,7 +1469,9 @@ function personBlock(r, headline){
     ${r.outcome ? `<div class="mSec"><h3>기대하는 결과물 수준</h3><span class="mOutcome">${esc(r.outcome)}</span></div>` : ''}`;
 }
 
-function openOrg(key){
+/* opts.noRate = true 로 열면 운영진 평가(별점)를 숨겨요 — 최종 배정표는 확정본이라 평가가 필요 없어요 */
+function openOrg(key, opts){
+  const noRate = !!(opts && opts.noRate);
   const o = ORGS.find(x => x.key === key);
   if (!o) return;
   const modal = document.getElementById('modal');
@@ -1563,12 +1484,12 @@ function openOrg(key){
       ${o.regions.map(r => `<span>📍 ${esc(r)}</span>`).join('')}
       ${o.fieldsArr.map(f => `<span class="gray">${esc(f)}</span>`).join('')}
     </div>
-    <div class="rateBox" id="rateBox"></div>
+    ${noRate ? '' : '<div class="rateBox" id="rateBox"></div>'}
     ${o.rows.map((r, i) =>
       (i > 0 ? '<hr class="mDivider"/>' : '') +
       personBlock(r, o.rows.length > 1 ? `신청 ${i + 1} · ${r.name} (${r.ts.slice(5,16)})` : '')
     ).join('')}`;
-  renderRateBox(o.key);
+  if (!noRate) renderRateBox(o.key);
   const ov = document.getElementById('overlay');
   ov.classList.add('open');
   ov.getBoundingClientRect();
@@ -1622,7 +1543,6 @@ function render(data){
   renderFinalListFilter();
   renderTagFilter();
   renderOrgList();
-  renderMatchPage();
   renderFinalTable();
 }
 
