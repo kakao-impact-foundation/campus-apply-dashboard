@@ -349,6 +349,23 @@ if (top === self) location.replace('admin.html#mentor');</script>
   .chipM .chipInfo:hover { opacity: 1; transform: scale(1.15); }
   .noneB { font-size: 12.5px; color: var(--muted); font-weight: 600; }
 
+  /* ── 최종 배정표 ── */
+  .finalGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 16px; align-items: start; }
+  .fCard { background: var(--card); border-radius: 20px; padding: 18px 18px 14px; }
+  .fCard .fHead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+  .fCard h3 { font-family: 'KakaoBigSans', Pretendard, sans-serif; font-size: 16px; font-weight: 800; }
+  .fCard .fCnt { margin-left: auto; font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .fRows { display: flex; flex-direction: column; gap: 6px; }
+  .fRow {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: var(--white); border-radius: 12px; padding: 9px 12px;
+  }
+  .fRow .jDot { width: 8px; height: 8px; border-radius: 50%; background: var(--jc, var(--etc)); flex: 0 0 auto; margin-top: 5px; }
+  .fRow .fMain { min-width: 0; flex: 1; }
+  .fRow .fName { font-size: 13.5px; font-weight: 800; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .fRow .fJob { font-size: 11px; font-weight: 800; color: var(--acc-text); background: var(--acc-faint); border-radius: 999px; padding: 2px 8px; }
+  .fRow .fSub { font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere; }
+
   /* ── 합불 심사 (태그 + 버튼) ── */
   .stRow { display: inline-flex; gap: 3px; flex: 0 0 auto; }
   .stBtn {
@@ -499,6 +516,7 @@ if (top === self) location.replace('admin.html#mentor');</script>
     <button class="pTab" data-page="dept">지원자 검토</button>
     <button class="pTab" data-page="school">멘토 희망 대학</button>
     <button class="pTab" data-page="board">배정 보드</button>
+    <button class="pTab" data-page="final">최종 배정표</button>
   </nav>
 
   <div class="card noteCard" id="statusNote" style="display:none">⚠️ 합불 심사 저장을 켜려면 <b>mentor-apps-script.gs 새 버전 배포</b>가 필요해요 — 멘토 시트 → Apps Script → 코드 교체 → 배포 관리 → ✏️ → 버전 "새 버전" → 배포 (URL은 그대로예요)</div>
@@ -587,6 +605,16 @@ if (top === self) location.replace('admin.html#mentor');</script>
     <div class="card" id="boardNote" style="display:none">⚠️ 배정 저장을 켜려면 <b>mentor-apps-script.gs 새 버전 배포</b>가 필요해요 — 멘토 시트 → Apps Script → 코드 교체 → 배포 관리 → ✏️ → 버전 "새 버전" → 배포 (URL은 그대로예요)</div>
     <div class="boardGrid" id="boardGrid"></div>
   </div><!-- /page-board -->
+
+  <div id="page-final" style="display:none">
+    <div class="boardBar rise">
+      <div>
+        <div class="cardTitle">최종 배정표</div>
+        <div class="cardSub" id="finalHint"></div>
+      </div>
+    </div>
+    <div class="finalGrid" id="finalGrid"></div>
+  </div><!-- /page-final -->
 
   <footer>카카오임팩트 · 테크포임팩트 캠퍼스 — 내부 운영용 대시보드<br/>
   <a class="sheetBtn" href="https://docs.google.com/spreadsheets/d/14GF-Du7sDDciiUCKJcsazNzy1ae8nf1MRrzgsfIJYuk/edit?resourcekey=&gid=679275159#gid=679275159" target="_blank" rel="noopener">📄 멘토 신청서 응답 시트 열기 →</a></footer>
@@ -1426,14 +1454,56 @@ document.querySelectorAll('#scenTabs .scen').forEach(b =>
     renderBoard();
   }));
 
+/* ── 최종 배정표 — 확정 스냅샷 (2026-08-13, 멘토 명단 시트 기준)
+   조안이 지정한 공개 가능 필드만 수록: 이름·직군·공동체·소속 부서 (연락처·이메일·LDAP 등 개인정보 제외)
+   [이름, 직군, 상세직군, 공동체, 소속 부서, 재참여(1)] */
+const FINAL = {
+  "가천대": [["김수지", "기획", "기획", "카카오", "맵탐색스쿼드", 1], ["김승민", "개발", "모바일", "디케이테크인", "커넥트서비스팀", 0], ["김재훈", "개발", "백엔드", "카카오페이", "보안기술팀", 0], ["민경훈", "개발", "백엔드", "카카오모빌리티", "채널링개발팀", 1], ["신현지", "기획", "기획", "카카오스타일", "전시시스템팀", 0], ["이다니엘", "AI", "AI/ML", "카카오", "Language Model Agent", 0], ["이소영", "기획", "기획", "카카오페이", "파트너비즈파티", 0], ["장지석", "개발", "백엔드", "카카오엔터테인먼트", "스토리서비스백엔드개발", 1]],
+  "경운대": [["고병일", "AI", "AI/ML", "카카오", "Language Model Agent", 0], ["박기쁨", "기획", "기획", "카카오", "안티어뷰징팀", 0], ["박지환", "기획", "기획", "카카오모빌리티", "대중교통서비스파트", 0], ["신채린", "디자인", "디자인", "카카오페이", "BX디자인팀", 0], ["안영진", "개발", "백엔드", "카카오", "장소데이터팀", 0], ["안용준", "개발", "풀스택", "카카오", "장소데이터팀", 1], ["이서린", "개발", "백엔드", "카카오", "AI Connect 프로덕트개발", 1], ["차경준", "개발", "데이터", "카카오페이", "데이터파이프라인유닛", 0]],
+  "고려대(세종)": [["김남희", "개발", "프론트엔드", "카카오헬스케어", "솔루션개발팀", 0], ["노원재", "AI", "AI/ML", "카카오", "AI플랫폼", 0], ["백민서", "개발", "풀스택", "카카오", "톡Windows팀", 0], ["신지현", "개발", "기획", "카카오헬스케어", "QA", 0], ["유재민", "개발", "백엔드", "카카오페이", "광고플랫폼파티", 0], ["이경연", "기획", "기획", "카카오게임즈", "서비스기획실", 0], ["조선웅", "개발", "모바일", "디케이테크인", "워크클라이언트팀", 0], ["김송진", "기획", "기획", "카카오", "파트너플랫폼팀", 0]],
+  "동국대": [["김성현", "개발", "백엔드", "카카오", "인프라개발", 0], ["나병호", "개발", "백엔드", "카카오", "관측데이터수집", 0], ["송지현", "개발", "백엔드", "카카오", "관측데이터저장", 1], ["위성철", "개발", "모바일", "카카오헬스케어", "VC iOS파트", 0], ["이민정", "기획", "기획", "카카오스타일", "포스티프로덕트팀", 0], ["이상은", "개발", "모바일", "카카오페이", "앱서비스파트", 1], ["임수진", "기획", "기획", "카카오", "AI Connect 플랫폼&사업", 0], ["노채영", "기획", "기획", "카카오페이", "세그먼트TF", 0]],
+  "부산외대": [["김정태", "개발", "모바일", "카카오", "카카오맵 > 길찾기스쿼드", 0], ["김희기", "기획", "기획", "카카오모빌리티", "대중교통서비스파트", 0], ["박시창", "개발", "백엔드", "카카오페이", "마케팅플랫폼팀", 0], ["이동준", "AI", "AI/ML", "카카오", "AI플랫폼", 0], ["이승윤", "개발", "백엔드", "카카오스타일", "SRE", 0], ["이채록", "개발", "데이터", "카카오", "데이터분석플랫폼", 1], ["정욱조", "기획", "기획", "카카오", "사업자온보딩스쿼드", 0], ["천진우", "기획", "기획", "카카오", "BM스쿼드", 0]],
+  "서울대": [["노주희", "기획", "기획", "카카오", "비즈전략스쿼드", 0], ["손재완", "개발", "데이터", "카카오", "DB엔지니어링", 1], ["양진영", "기획", "기획", "카카오", "링키파이스쿼드", 0], ["염수연", "디자인", "디자인", "카카오", "AI서비스디자인", 0], ["오세민", "개발", "모바일", "카카오", "광고SDK팀", 0], ["이세원", "개발", "백엔드", "카카오모빌리티", "대중교통개발팀", 0], ["이재욱", "개발", "백엔드", "카카오모빌리티", "택시개발팀", 0], ["주형진", "개발", "프론트엔드", "카카오", "쇼핑서비스FE개발팀", 0], ["황준익", "개발", "백엔드", "카카오", "고객데이터플랫폼팀", 0]],
+  "서울여대": [["김민수", "개발", "백엔드", "카카오페이", "DA서버유닛", 0], ["김현준", "개발", "백엔드", "카카오", "카카오비즈니스빌링&비즈에셋팀", 0], ["박민지", "개발", "프론트엔드", "카카오엔터프라이즈", "Client 개발팀", 0], ["심유민", "기획", "기획", "카카오페이", "보안개발팀", 0], ["이재복", "개발", "백엔드", "카카오", "광고서버팀", 1], ["임현지", "기획", "기획", "카카오", "M TF", 0], ["정소용", "개발", "모바일", "카카오", "동영상기술개발", 1], ["추재경", "기획", "기획", "카카오페이", "Bpr팀", 1]],
+  "시립대": [["김보현", "기획", "기획", "카카오", "SRE거버넌스", 0], ["김시진", "개발", "모바일", "카카오모빌리티", "택시개발팀", 1], ["김채현", "개발", "백엔드", "카카오", "카카오비즈니스빌링&비즈에셋팀", 1], ["유완식", "기획", "기획", "카카오", "SRE거버넌스", 0], ["이대진", "개발", "프론트엔드", "카카오페이", "광고플랫폼파티", 0], ["이상헌", "개발", "백엔드", "카카오", "비즈니스프로필스쿼드", 0], ["조재호", "개발", "백엔드", "카카오", "시스템엔지니어링3", 0], ["조혜민", "디자인", "디자인", "카카오", "톡클라우드스쿼드", 0]],
+  "한라대": [["강경태", "개발", "백엔드", "카카오엔터테인먼트", "멜론서비스개발팀", 1], ["민규식", "AI", "AI/ML", "카카오", "AI Alignment", 0], ["백찬미", "기획", "기획", "카카오", "링키파이스쿼드", 0], ["서준혁", "기획", "기획", "카카오페이", "봇서비스팀", 0], ["신태욱", "개발", "모바일", "카카오", "아지트", 1], ["윤서현", "개발", "프론트엔드", "카카오", "숏폼&피드플랫폼스쿼드", 0], ["조원제", "개발", "백엔드", "카카오헬스케어", "솔루션개발팀", 0], ["황지성", "기획", "기획", "카카오", "참여형광고스쿼드", 0]],
+  "GIST": [["고지훈", "개발", "모바일", "카카오엔터테인먼트", "멜론Android개발", 0], ["김진옥", "개발", "프론트엔드", "카카오", "인사이트&액티베이션스쿼드", 0], ["박희수", "AI", "기획", "카카오", "FDE", 0], ["반혜림", "기획", "기획", "카카오모빌리티", "자율주행서비스파트", 0], ["이창용", "기획", "기획", "카카오", "채팅탭스쿼드", 0], ["최지원", "개발", "백엔드", "카카오", "쇼핑경험혁신스쿼드", 0], ["편장욱", "개발", "백엔드", "카카오", "쇼핑경험혁신스쿼드", 0]],
+  "KAIST": [["김경태", "개발", "풀스택", "카카오", "로드뷰시스템팀", 1], ["박민영", "기획", "기획", "카카오", "Shareholder Communication", 0], ["변준영", "개발", "백엔드", "카카오", "아지트", 0], ["서민주", "기획", "기획", "카카오", "브랜드픽&리워드스쿼드", 0], ["소병욱", "AI", "AI/ML", "카카오헬스케어", "VC사업팀", 0], ["손지훈", "개발", "모바일", "카카오모빌리티", "길안내iOS셀", 0], ["장환승", "개발", "데이터", "카카오", "데이터공유활용플랫폼", 0], ["차은경", "디자인", "디자인", "카카오", "소셜임팩트 > 메이커스", 0]],
+  "UNIST": [["김찬호", "개발", "백엔드", "카카오", "장소정보스쿼드", 0], ["김한빈", "개발", "백엔드", "카카오", "파트너플랫폼팀", 0], ["신동윤", "개발", "풀스택", "카카오", "톡체크아웃 스쿼드", 0], ["윤장원", "개발", "기획", "카카오헬스케어", "솔루션개발팀", 0], ["탁진호", "기획", "기획", "카카오엔터프라이즈", "공공사업팀", 0], ["황민호", "AI", "AI/ML", "카카오", "FDE", 1], ["황수인", "기획", "기획", "카카오모빌리티", "Corporate Development 팀", 0]]
+};
+
+let FINAL_DONE = false;
+function renderFinal(){
+  if (FINAL_DONE) return; // 정적 스냅샷이라 한 번만 그려요
+  FINAL_DONE = true;
+  const schools = Object.keys(FINAL);
+  const total = schools.reduce((n, s) => n + FINAL[s].length, 0);
+  document.getElementById('finalHint').textContent =
+    `${schools.length}개 대학 · 멘토 ${total}명 — 2026-08-13 확정 (🔁=재참여)`;
+  document.getElementById('finalGrid').innerHTML = schools.map(s => `
+    <div class="fCard">
+      <div class="fHead"><h3>${esc(s)}</h3><span class="fCnt">${FINAL[s].length}명</span></div>
+      <div class="fRows">${FINAL[s].map(([n, j, c, co, d, re]) => `
+        <div class="fRow">
+          <span class="jDot" style="--jc:${jobDColor(c)}"></span>
+          <div class="fMain">
+            <div class="fName">${esc(n)}${re ? ' 🔁' : ''} <span class="fJob">${esc(c === j ? j : c)}</span></div>
+            <div class="fSub">${esc(co)} · ${esc(d)}</div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
 /* ── 페이지 탭 ── */
 function switchPage(p){
-  ['home', 'dept', 'school', 'board'].forEach(k =>
+  ['home', 'dept', 'school', 'board', 'final'].forEach(k =>
     document.getElementById('page-' + k).style.display = p === k ? '' : 'none');
   document.querySelectorAll('.pTab').forEach(b => b.classList.toggle('on', b.dataset.page === p));
   if (p === 'dept') renderDeptPage();
   if (p === 'school') renderSchoolPage();
   if (p === 'board') renderBoard();
+  if (p === 'final') renderFinal();
 }
 document.querySelectorAll('.pTab').forEach(b =>
   b.addEventListener('click', () => switchPage(b.dataset.page)));
