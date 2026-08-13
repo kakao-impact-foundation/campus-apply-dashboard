@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<script>/* 직접 접속 시 어드민 허브의 해당 탭으로 통합 (iframe 안에서는 그대로 동작) */
+if (top === self) location.replace('admin.html#campus');</script>
+<title>테크포임팩트 캠퍼스 · 대학 운영 현황</title>
+<style>
+  @font-face {
+    font-family: 'KakaoBigSans';
+    src: url('https://kakao-impact-foundation.github.io/campus_2026_spring/_next/static/media/KakaoBigSans_ExtraBold-s.p.3i93y_9jgiys7.woff2') format('woff2');
+    font-weight: 800; font-display: swap;
+  }
+  @font-face {
+    font-family: 'KakaoBigSans';
+    src: url('https://kakao-impact-foundation.github.io/campus_2026_spring/_next/static/media/KakaoBigSans_Bold-s.p.2g6eznqppexyp.woff2') format('woff2');
+    font-weight: 700; font-display: swap;
+  }
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+  :root {
+    --acc: #3B82F6;        /* 캠퍼스 = 블루 (혁신가 핑크·멘토 앰버와 구분) */
+    --acc-text: #1D4ED8;   /* 흰 배경 위 텍스트용 */
+    --acc-soft: #BFDBFE;
+    --acc-faint: #EFF6FF;
+    --ink: #1C1C1C;
+    --muted: #8C8C8C;
+    --body: #4A4A4A;
+    --card: #F6F8FA;
+    --line: #ECEFF3;
+    --white: #FFFFFF;
+    --ok: #0FA36B;
+    --warn: #E8830C;
+    --bad: #D93636;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, sans-serif;
+    background: var(--white);
+    color: var(--ink);
+    padding: 44px 28px 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  .rise { animation: rise .55s cubic-bezier(.2,.7,.2,1) both; }
+
+  /* ── header ─────────────────────────── */
+  header { margin-bottom: 28px; }
+  .topBadge { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .topBadge svg { height: 22px; width: auto; display: block; }
+  .topBadge .term { color: var(--muted); font-weight: 700; font-size: 13px; }
+  h1 {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800;
+    font-size: clamp(28px, 4vw, 42px);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 14px;
+  }
+  .updated { margin-top: 6px; font-size: 13px; color: var(--muted); }
+
+  .card { background: var(--card); border-radius: 24px; padding: 26px; }
+  .cardTitle {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800; font-size: 19px; margin-bottom: 4px;
+  }
+  .cardSub { font-size: 13.5px; color: var(--muted); margin-bottom: 16px; }
+
+  /* ── 학교 선택 칩 ── */
+  .schoolRow { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 8px; }
+  .sChip {
+    appearance: none; cursor: pointer;
+    border: 1.5px solid var(--line); background: var(--white);
+    color: var(--body); font-family: inherit;
+    font-weight: 700; font-size: 13px;
+    padding: 8px 14px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: all .15s ease;
+  }
+  .sChip .st { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+  .sChip .st.on { background: var(--ok); }
+  .sChip .st.err { background: var(--bad); }
+  .sChip:hover { border-color: var(--acc); color: var(--ink); }
+  .sChip.active { border-color: var(--acc); background: var(--acc); color: #fff; }
+  .sChip.active .st { background: #fff; }
+
+  /* ── 페이지 탭 ── */
+  .pageTabs { display: flex; gap: 8px; margin: 14px 0 36px; flex-wrap: wrap; }
+  .pTab {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    background: var(--card); border: none; border-radius: 999px;
+    padding: 11px 22px; font-size: 15px; font-weight: 800; color: var(--muted);
+    cursor: pointer; transition: background .2s, color .2s, transform .15s;
+  }
+  .pTab:hover { transform: translateY(-1px); }
+  .pTab.on { background: var(--ink); color: #fff; }
+
+  /* ── 히어로 (진행률) ── */
+  .hero { display: flex; align-items: center; gap: 40px; }
+  .hero .heroL { flex: 0 0 auto; }
+  .hero .heroR { flex: 1; min-width: 260px; }
+  @media (max-width: 720px) { .hero { flex-direction: column; align-items: stretch; gap: 18px; } }
+  .statLabel { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
+  .goalRow { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .bigNum {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800; font-size: 58px; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .goalRow .of { font-size: 19px; font-weight: 700; color: var(--muted); }
+  .goalRow .pct {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800; font-size: 19px; color: var(--acc-text);
+    background: var(--acc-faint); border-radius: 999px; padding: 5px 13px;
+  }
+  .meter { height: 14px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  .meter > i {
+    display: block; height: 100%; width: 0;
+    background: linear-gradient(90deg, var(--acc-soft), var(--acc));
+    border-radius: 999px; transition: width 1s cubic-bezier(.2,.7,.2,1);
+  }
+  .subStats { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+  .chip {
+    font-size: 12.5px; font-weight: 600; color: var(--body);
+    background: var(--white); border-radius: 999px; padding: 7px 13px;
+  }
+  .chip b { font-weight: 800; color: var(--ink); }
+
+  /* ── 카드 그리드 ── */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+
+  /* ── kv 리스트 (수업 정보 등) ── */
+  .kv { display: grid; grid-template-columns: 130px 1fr; row-gap: 9px; column-gap: 14px; font-size: 14px; }
+  .kv dt { color: var(--muted); font-weight: 700; }
+  .kv dd { color: var(--ink); word-break: break-all; }
+
+  /* ── 테이블 ── */
+  .tblWrap { overflow-x: auto; }
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--white); border-radius: 14px; overflow: hidden; }
+  .tbl th {
+    text-align: left; font-size: 12px; color: var(--muted); font-weight: 700;
+    padding: 10px 12px; border-bottom: 1.5px solid var(--line); background: var(--white);
+    white-space: nowrap;
+  }
+  .tbl td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tbl tr:last-child td { border-bottom: 0; }
+  .tbl td.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .tbl tr.total td { font-weight: 800; background: var(--acc-faint); }
+
+  /* ── 체크리스트 ── */
+  .monthHead {
+    font-family: 'KakaoBigSans', Pretendard, sans-serif;
+    font-weight: 800; font-size: 16px; margin: 26px 0 10px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .monthHead:first-child { margin-top: 0; }
+  .monthHead .mCount { font-size: 12.5px; color: var(--muted); font-weight: 700; }
+  .ckItem {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: var(--white); border-radius: 16px; padding: 14px 16px; margin-bottom: 8px;
+  }
+  .ckMark { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-top: 1px; }
+  .ckMark.done { background: #E7F6EF; }
+  .ckMark.todo { background: var(--line); }
+  .ckMark.tbd  { background: var(--line); }
+  .ckBody { flex: 1; min-width: 0; }
+  .ckTop { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ckTitle { font-weight: 800; font-size: 14.5px; }
+  .ckItem.isDone .ckTitle { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+  .ckDue { font-size: 12px; color: var(--muted); font-weight: 700; white-space: nowrap; }
+  .ckDue.over { color: var(--bad); }
+  .ckDue.soon { color: var(--warn); }
+  .catB { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 3px 9px; color: #fff; white-space: nowrap; }
+  .stB { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 3px 9px; background: var(--line); color: var(--body); white-space: nowrap; }
+  .ckDesc { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin-top: 4px; white-space: pre-line; }
+  .ckLink {
+    display: inline-flex; align-items: center; gap: 5px; margin-top: 7px;
+    font-size: 12px; font-weight: 700; color: var(--acc-text);
+    background: var(--acc-faint); border-radius: 999px; padding: 5px 11px;
+    text-decoration: none;
+  }
+  .ckLink:hover { background: var(--acc-soft); }
+
+  /* ── 전체 현황 ── */
+  .ovRow {
+    display: grid; grid-template-columns: 150px 1fr 210px; gap: 18px; align-items: center;
+    background: var(--white); border-radius: 16px; padding: 15px 18px; margin-bottom: 8px;
+    cursor: pointer; transition: box-shadow .15s;
+  }
+  .ovRow:hover { box-shadow: 0 2px 12px rgba(0,0,0,.07); }
+  @media (max-width: 800px) { .ovRow { grid-template-columns: 1fr; gap: 8px; } }
+  .ovName { font-weight: 800; font-size: 14.5px; display: flex; align-items: center; gap: 8px; }
+  .ovMeterRow { display: flex; align-items: center; gap: 12px; }
+  .ovMeterRow .meter { flex: 1; height: 10px; }
+  .ovPct { font-size: 12.5px; font-weight: 800; color: var(--acc-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .ovNext { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .ovNext b { color: var(--body); font-weight: 700; }
+  .ovErr { font-size: 12.5px; color: var(--bad); font-weight: 600; }
+
+  .schoolDot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+
+  /* ── 안내/빈 상태 ── */
+  .noteCard { font-size: 13.5px; color: var(--body); line-height: 1.7; margin-bottom: 18px; }
+  .emptyBox {
+    text-align: center; padding: 44px 20px; color: var(--muted);
+    background: var(--white); border-radius: 16px; font-size: 14px; line-height: 1.7;
+  }
+  .emptyBox .big { font-size: 30px; margin-bottom: 8px; }
+
+  .sheetBtn {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 700; color: var(--acc-text);
+    background: var(--acc-faint); border-radius: 999px; padding: 8px 16px;
+    text-decoration: none; margin-top: 4px;
+  }
+  .sheetBtn:hover { background: var(--acc-soft); }
+
+  footer { margin-top: 60px; text-align: center; font-size: 12.5px; color: var(--muted); line-height: 2.2; }
+
+  /* ── 비밀번호 게이트 (index/mentor와 동일) ── */
+  body.locked > .wrap { display: none; }
+  #gate {
+    display: none;
+    position: fixed; inset: 0;
+    background: var(--white);
+    z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  body.locked #gate { display: flex; }
+  .gateCard { text-align: center; max-width: 340px; padding: 24px; }
+  .gateCard h2 { font-family: 'KakaoBigSans', Pretendard, sans-serif; font-weight: 800; font-size: 22px; margin: 16px 0 8px; }
+  .gateCard p { color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+  .gateCard input {
+    width: 100%; padding: 12px 14px;
+    border: 1.5px solid var(--line); border-radius: 10px;
+    font-family: inherit; font-size: 15px; text-align: center; outline: none;
+  }
+  .gateCard input:focus { border-color: var(--ink); }
+  .gateCard button {
+    width: 100%; margin-top: 10px; padding: 12px;
+    border: 0; border-radius: 10px;
+    background: var(--ink); color: #fff;
+    font-family: inherit; font-weight: 700; font-size: 15px; cursor: pointer;
+  }
+  .gateCard .err { color: #D93636; font-size: 13px; margin-top: 10px; min-height: 18px; }
+</style>
+</head>
+<body class="locked">
+
+<div id="gate">
+  <div class="gateCard">
+    <div style="font-family:'KakaoBigSans',Pretendard,sans-serif;font-weight:800;font-size:13px;">TECH FOR !MPACT <span style="background:#1C1C1C;color:#fff;border-radius:999px;padding:3px 10px;font-size:11.5px;">Admin</span></div>
+    <h2>운영팀 대시보드</h2>
+    <p>대학 운영 현황 어드민은 운영팀용이에요.<br/>비밀번호를 입력해 주세요.</p>
+    <input type="password" id="gatePw" placeholder="비밀번호" autocomplete="off" />
+    <button id="gateBtn">들어가기</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <header>
+    <div class="topBadge rise">
+      <svg viewBox="0 0 200 24" aria-label="TECH FOR IMPACT"><text x="0" y="18" font-family="KakaoBigSans, Pretendard, sans-serif" font-weight="800" font-size="18" fill="#1C1C1C">TECH FOR !MPACT</text></svg>
+      <span class="term">2026 가을학기 · 캠퍼스</span>
+    </div>
+    <h1 class="rise" style="animation-delay:.04s">참여 대학 운영 현황</h1>
+    <div class="updated rise" id="updated" style="animation-delay:.08s">불러오는 중…</div>
+
+    <div class="schoolRow rise" id="schoolRow" style="animation-delay:.12s"></div>
+
+    <nav class="pageTabs rise" style="animation-delay:.14s">
+      <button class="pTab on" data-page="all">전체 현황</button>
+      <button class="pTab" data-page="home">개요</button>
+      <button class="pTab" data-page="check">체크리스트</button>
+      <button class="pTab" data-page="students">수강생 · 팀</button>
+      <button class="pTab" data-page="budget">예산</button>
+      <button class="pTab" data-page="demo">성과발표회</button>
+    </nav>
+  </header>
+
+  <div id="page-all">
+    <div class="card noteCard rise">12개 참여 대학의 <b>체크리스트 진행률</b>이에요. 학교를 클릭하면 상세로 이동합니다.
+      마스터 시트의 '시트 주소'에 학교 링크를 추가하면 자동으로 연동돼요.</div>
+    <div id="ovList"></div>
+  </div>
+
+  <div id="page-home" style="display:none">
+    <section class="card rise" style="margin-bottom:18px">
+      <div class="hero">
+        <div class="heroL">
+          <div class="statLabel" id="heroLabel">체크리스트 진행률</div>
+          <div class="goalRow">
+            <span class="bigNum" id="heroNum">0</span>
+            <span class="of" id="heroOf">/ 0</span>
+            <span class="pct" id="heroPct">0%</span>
+          </div>
+        </div>
+        <div class="heroR">
+          <div class="meter"><i id="heroMeter"></i></div>
+          <div class="subStats" id="heroChips"></div>
+        </div>
+      </div>
+    </section>
+    <div class="grid2">
+      <section class="card rise" style="animation-delay:.05s">
+        <div class="cardTitle">수업 정보</div>
+        <div class="cardSub">과목 개설 및 모집 정보</div>
+        <dl class="kv" id="courseKv"></dl>
+      </section>
+      <section class="card rise" style="animation-delay:.08s">
+        <div class="cardTitle">학사 일정</div>
+        <div class="cardSub">개강 · 시험 · 종강</div>
+        <dl class="kv" id="calKv"></dl>
+        <div style="margin-top:18px" id="homeNext"></div>
+      </section>
+    </div>
+    <section class="card rise" style="animation-delay:.1s">
+      <div class="cardTitle">운영진</div>
+      <div class="cardSub">수업 담당 교수 및 조교·행정 담당자</div>
+      <div class="tblWrap"><table class="tbl" id="staffTbl"></table></div>
+      <div style="margin-top:14px"><a class="sheetBtn" id="homeSheetBtn" target="_blank" rel="noopener">📄 학교 운영 시트 열기 →</a></div>
+    </section>
+  </div>
+
+  <div id="page-check" style="display:none">
+    <div class="card rise" id="checkBox"></div>
+  </div>
+
+  <div id="page-students" style="display:none">
+    <section class="card rise" style="margin-bottom:18px">
+      <div class="cardTitle">수강생</div>
+      <div class="cardSub" id="stuSub"></div>
+      <div id="stuBox"></div>
+    </section>
+    <section class="card rise" style="animation-delay:.05s">
+      <div class="cardTitle">프로젝트 팀</div>
+      <div class="cardSub" id="teamSub"></div>
+      <div id="teamBox"></div>
+    </section>
+  </div>
+
+  <div id="page-budget" style="display:none">
+    <div class="grid2" style="grid-template-columns: 1.4fr 1fr;">
+      <section class="card rise">
+        <div class="cardTitle">예산 운영 계획</div>
+        <div class="cardSub">학기당 지원 1,500만 원 · 기부금 형태</div>
+        <div id="budgetBox"></div>
+      </section>
+      <section class="card rise" style="animation-delay:.05s">
+        <div class="cardTitle">기부금 집행 절차</div>
+        <div class="cardSub">대학 ↔ 카카오임팩트</div>
+        <div id="stepsBox"></div>
+      </section>
+    </div>
+  </div>
+
+  <div id="page-demo" style="display:none">
+    <div class="grid2">
+      <section class="card rise">
+        <div class="cardTitle">준비 체크리스트</div>
+        <div class="cardSub" id="demoPrepSub"></div>
+        <div id="demoPrepBox"></div>
+      </section>
+      <div>
+        <section class="card rise" style="animation-delay:.04s; margin-bottom:18px">
+          <div class="cardTitle">운영 정보</div>
+          <div class="cardSub">일시 · 장소 · 물품 배송</div>
+          <dl class="kv" id="demoInfoKv"></dl>
+        </section>
+        <section class="card rise" style="animation-delay:.07s">
+          <div class="cardTitle">시상 계획</div>
+          <div class="cardSub">우수 프로젝트 4개 상</div>
+          <div class="tblWrap"><table class="tbl" id="awardTbl"></table></div>
+        </section>
+      </div>
+    </div>
+    <section class="card rise" style="animation-delay:.1s">
+      <div class="cardTitle">식순</div>
+      <div class="cardSub">성과발표회 진행 순서</div>
+      <div class="tblWrap"><table class="tbl" id="agendaTbl"></table></div>
+    </section>
+  </div>
+
+  <footer>카카오임팩트 · 테크포임팩트 캠퍼스 — 내부 운영용 대시보드<br/>
+  <a class="sheetBtn" href="https://docs.google.com/spreadsheets/d/1-yD3gmYfykoiSZTArs736uvDnvXUYkANlrWOTqPVCbg/edit?gid=2000827737#gid=2000827737" target="_blank" rel="noopener">📄 캠퍼스 운영 마스터 시트 열기 →</a></footer>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   설정: 캠퍼스 운영 마스터 시트의 Apps Script 웹앱 배포 URL을 붙여넣으면
+   페이지를 열 때마다 12개 학교 시트 최신 데이터를 자동으로 불러와요.
+   (campus-apps-script.gs 파일의 설치 방법 참고)
+═══════════════════════════════════════════════════════════════ */
+const DATA_URL = "";
+
+/* 학교 표시 색 (멘토 대시보드와 동일 팔레트) */
+const SCHOOL_COLORS = {
+  '가천대': '#E470DC', '경운대': '#B45F06', '고려대(세종)': '#B58900',
+  '동국대': '#274E13', '부산외대': '#0C343D', '서울대': '#1C4587',
+  '시립대': '#073763', '서울여대': '#741B47', '한라대': '#20124D',
+  'GIST': '#85200C', 'KAIST': '#38761D', 'UNIST': '#134F5C'
+};
+/* 마스터 시트 학교명 → 짧은 표기 (칩·전체 현황용) */
+const SHORT_KEYS = [
+  ['가천', '가천대'], ['경운', '경운대'], ['고려', '고려대(세종)'], ['동국', '동국대'],
+  ['부산외', '부산외대'], ['서울시립', '시립대'], ['서울여자', '서울여대'], ['서울대', '서울대'],
+  ['한라', '한라대'], ['GIST', 'GIST'], ['KAIST', 'KAIST'], ['UNIST', 'UNIST']
+];
+const shortName = n => { const hit = SHORT_KEYS.find(([k]) => n.includes(k)); return hit ? hit[1] : n; };
+const schoolColor = n => SCHOOL_COLORS[shortName(n)] || '#8C8C8C';
+
+const CAT_COLORS = { '정보 입력': '#3B82F6', '문서 제출': '#8B5CF6', '문서 확인': '#0EA5E9', '행사 참석': '#0FA36B' };
+const catColor = c => CAT_COLORS[c] || '#8C8C8C';
+
+let DATA = null;        // 마지막 응답
+let SCHOOLS = [];       // [{name,url,ok,tabs,parsed}]
+let CUR = sessionStorage.getItem('tfi_campus_school') || '';
+let PAGE = 'all';
+
+function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ═══════════ 시트 그리드 파싱 ═══════════
+ * Apps Script가 내려주는 값은 탭별 원본 그리드(2차원 배열)예요.
+ * 학교마다 템플릿이 같아서, 헤더 라벨을 찾아 그 기준으로 읽습니다
+ * (행·열이 조금 밀려도 안전하게).
+ */
+const cell = (g, r, c) => (g[r] && g[r][c] != null) ? String(g[r][c]).trim() : '';
+/* 라벨들이 전부 들어있는 행 찾기 → {r, col(label)} */
+function findHeader(grid, labels){
+  for (let r = 0; r < grid.length; r++){
+    const cols = {};
+    if (labels.every(l => (cols[l] = grid[r].findIndex(x => String(x).trim() === l)) >= 0)) return { r, col: l => cols[l] };
+  }
+  return null;
+}
+
+function parseChecklist(grid){
+  if (!grid) return null;
+  const h = findHeader(grid, ['순번', '항목', '진행 현황']);
+  if (!h) return null;
+  const c0 = h.col('순번');
+  const rows = [];
+  let month = '';
+  for (let r = h.r + 1; r < grid.length; r++){
+    const no = cell(grid, r, c0);
+    if (!/^\d+$/.test(no)) continue;
+    month = cell(grid, r, c0 + 1) || month;
+    rows.push({
+      no, month,
+      due: cell(grid, r, c0 + 2),
+      cat: cell(grid, r, c0 + 3),
+      item: cell(grid, r, c0 + 4),
+      desc: cell(grid, r, c0 + 5),
+      link: cell(grid, r, c0 + 6),
+      status: cell(grid, r, c0 + 7)
+    });
+  }
+  return rows;
+}
+
+function parseCourse(grid){
+  if (!grid) return null;
+  const out = { info: [], calendar: [], staff: [] };
+  const h = findHeader(grid, ['항목', '내용']);
+  if (h){
+    const ci = h.col('항목');
+    let group = '';
+    for (let r = h.r + 1; r < grid.length; r++){
+      group = cell(grid, r, ci - 1) || group;
+      if (group.startsWith('**')) break;
+      const item = cell(grid, r, ci), val = cell(grid, r, ci + 1);
+      if (!item) continue;
+      (group.includes('학사') ? out.calendar : out.info).push({ item, val });
+    }
+  }
+  const s = findHeader(grid, ['성명', '직책', '역할']);
+  if (s){
+    const c0 = s.col('성명');
+    for (let r = s.r + 1; r < grid.length; r++){
+      const name = cell(grid, r, c0);
+      if (!name || name.startsWith('**')) { if (!name && !cell(grid, r, c0 + 1)) continue; else if (name.startsWith('**')) break; }
+      if (name) out.staff.push({
+        name, role: cell(grid, r, c0 + 1), org: cell(grid, r, c0 + 2),
+        email: cell(grid, r, c0 + 3), phone: cell(grid, r, c0 + 4), duty: cell(grid, r, c0 + 5)
+      });
+    }
+  }
+  return out;
+}
+
+function parseBudget(grid){
+  if (!grid) return null;
+  const out = { rows: [], total: '', steps: [] };
+  const h = findHeader(grid, ['구분', '항목', '금액(원)']);
+  if (h){
+    const c0 = h.col('구분');
+    for (let r = h.r + 1; r < grid.length; r++){
+      const cat = cell(grid, r, c0), item = cell(grid, r, c0 + 1), amt = cell(grid, r, c0 + 2);
+      if (cat.startsWith('**')) break;
+      if (item === '총액') { out.total = amt; continue; }
+      if (item) out.rows.push({ cat, item, amt, detail: cell(grid, r, c0 + 3) });
+    }
+  }
+  const s = findHeader(grid, ['진행 순서', '담당', '내용']);
+  if (s){
+    const c0 = s.col('진행 순서');
+    for (let r = s.r + 1; r < grid.length; r++){
+      const no = cell(grid, r, c0);
+      if (!/^\d+$/.test(no)) continue;
+      out.steps.push({ no, who: cell(grid, r, c0 + 1), what: cell(grid, r, c0 + 2) });
+    }
+  }
+  return out;
+}
+
+function parseStudents(grid){
+  if (!grid) return null;
+  const out = { list: [], teams: [] };
+  const h = findHeader(grid, ['이름', '학번', '최종 상태']);
+  if (h){
+    const c0 = h.col('이름');
+    for (let r = h.r + 1; r < grid.length; r++){
+      if (!cell(grid, r, c0)) continue;
+      out.list.push({
+        name: cell(grid, r, c0), sid: cell(grid, r, c0 + 1), major: cell(grid, r, c0 + 2),
+        email: cell(grid, r, c0 + 3), phone: cell(grid, r, c0 + 4), team: cell(grid, r, c0 + 5),
+        lead: cell(grid, r, c0 + 6), status: cell(grid, r, c0 + 7), note: cell(grid, r, c0 + 8)
+      });
+    }
+  }
+  const t = findHeader(grid, ['팀장(이름)', '사회혁신가', '카카오멘토']);
+  if (t){
+    const c0 = t.col('팀장(이름)');
+    for (let r = t.r + 1; r < grid.length; r++){
+      const team = cell(grid, r, c0 - 1);
+      if (!team) continue;
+      out.teams.push({
+        team, lead: cell(grid, r, c0), innovator: cell(grid, r, c0 + 1),
+        mentor: cell(grid, r, c0 + 2), award: cell(grid, r, c0 + 3)
+      });
+    }
+  }
+  return out;
+}
+
+function parseDemo(grid){
+  if (!grid) return null;
+  const out = { prep: [], info: [], awards: [], agenda: [] };
+  const h = findHeader(grid, ['진행 현황', '상명', '시간']);
+  if (!h) return out;
+  const hr = h.r;
+  const pSt = h.col('진행 현황');           // 준비 체크리스트: 순서·항목·내용·담당·진행현황
+  const gCol = grid[hr].findIndex(x => String(x).trim() === '구분');
+  const aName = h.col('상명');              // 시상: 순번·상명·선정기준·지급여부·시상금·비고
+  const tCol = h.col('시간');               // 식순: 순서·시간·항목·내용·담당자
+  for (let r = hr + 1; r < grid.length; r++){
+    if (/^\d+$/.test(cell(grid, r, pSt - 4)))
+      out.prep.push({ no: cell(grid, r, pSt - 4), item: cell(grid, r, pSt - 3), desc: cell(grid, r, pSt - 2), who: cell(grid, r, pSt - 1), status: cell(grid, r, pSt) });
+    if (gCol >= 0){
+      const k = cell(grid, r, gCol);
+      if (k && !k.startsWith('**') && !out._infoDone) out.info.push({ item: k, val: cell(grid, r, gCol + 1) });
+      if (k.startsWith('**')) out._infoDone = true;
+    }
+    if (/^\d+$/.test(cell(grid, r, aName - 1)))
+      out.awards.push({ no: cell(grid, r, aName - 1), name: cell(grid, r, aName), crit: cell(grid, r, aName + 1), pay: cell(grid, r, aName + 2), amt: cell(grid, r, aName + 3), note: cell(grid, r, aName + 4) });
+    if (/^\d+$/.test(cell(grid, r, tCol - 1)))
+      out.agenda.push({ no: cell(grid, r, tCol - 1), time: cell(grid, r, tCol), item: cell(grid, r, tCol + 1), desc: cell(grid, r, tCol + 2), who: cell(grid, r, tCol + 3) });
+  }
+  delete out._infoDone;
+  return out;
+}
+
+function parseSchool(s){
+  const t = s.tabs || {};
+  return {
+    checklist: parseChecklist(t['체크리스트']),
+    course: parseCourse(t['수업 및 운영진 정보']),
+    budget: parseBudget(t['예산 계획 및 기부금 처리']),
+    students: parseStudents(t['수강 인원 및 팀 정보']),
+    demo: parseDemo(t['성과발표회'])
+  };
+}
+
+/* ── 체크리스트 상태 해석 ── */
+function stInfo(s){
+  s = String(s || '').trim();
+  if (s === 'TRUE' || s === '완료' || s === '참석') return { k: 'done', label: s === 'TRUE' ? '완료' : s, icon: '✅' };
+  if (s === 'FALSE' || s === '') return { k: 'todo', label: '진행 전', icon: '⬜' };
+  if (s.includes('미정')) return { k: 'tbd', label: '미정', icon: '➖' };
+  return { k: 'note', label: s, icon: '🔹' }; // '11월 진행 예정' 등 자유 입력
+}
+const progress = list => {
+  const items = (list || []).filter(i => i.item);
+  const done = items.filter(i => stInfo(i.status).k === 'done').length;
+  return { done, total: items.length, pct: items.length ? Math.round(done / items.length * 100) : 0 };
+};
+
+/* 기한 '7월'+'19일 일' → Date (학기: 7~12월=올해, 1월~=내년) */
+function dueDate(month, due){
+  const m = parseInt(month), d = parseInt(due);
+  if (!m || !d) return null;
+  const now = new Date();
+  const year = m >= 7 ? (now.getMonth() + 1 >= 7 ? now.getFullYear() : now.getFullYear() - 1)
+                      : (now.getMonth() + 1 >= 7 ? now.getFullYear() + 1 : now.getFullYear());
+  return new Date(year, m - 1, d);
+}
+function dday(month, due){
+  const dt = dueDate(month, due);
+  if (!dt) return null;
+  const diff = Math.floor((dt - new Date(new Date().toDateString())) / 864e5);
+  return { diff, label: diff === 0 ? 'D-DAY' : diff > 0 ? `D-${diff}` : `D+${-diff}` };
+}
+
+/* ═══════════ 렌더링 ═══════════ */
+const $ = id => document.getElementById(id);
+const curSchool = () => SCHOOLS.find(s => s.name === CUR) || SCHOOLS[0];
+
+function renderSchoolChips(){
+  $('schoolRow').innerHTML = SCHOOLS.map(s => {
+    const st = !s.ok ? 'err' : (s.parsed && s.parsed.checklist ? 'on' : '');
+    return `<button class="sChip ${s.name === CUR ? 'active' : ''}" data-school="${esc(s.name)}">
+      <span class="st ${st}"></span>${esc(shortName(s.name))}</button>`;
+  }).join('');
+  document.querySelectorAll('.sChip').forEach(b => b.addEventListener('click', () => {
+    CUR = b.dataset.school;
+    sessionStorage.setItem('tfi_campus_school', CUR);
+    if (PAGE === 'all') showPage('home'); else renderPage();
+    renderSchoolChips();
+  }));
+}
+
+function showPage(p){
+  PAGE = p;
+  document.querySelectorAll('.pTab').forEach(b => b.classList.toggle('on', b.dataset.page === p));
+  ['all', 'home', 'check', 'students', 'budget', 'demo'].forEach(k => {
+    $('page-' + k).style.display = k === p ? '' : 'none';
+  });
+  renderPage();
+}
+document.querySelectorAll('.pTab').forEach(b => b.addEventListener('click', () => showPage(b.dataset.page)));
+
+function renderPage(){
+  if (!SCHOOLS.length) return;
+  if (PAGE === 'all') return renderOverview();
+  const s = curSchool();
+  if (!s) return;
+  if (PAGE === 'home') renderHome(s);
+  if (PAGE === 'check') renderCheck(s);
+  if (PAGE === 'students') renderStudents(s);
+  if (PAGE === 'budget') renderBudget(s);
+  if (PAGE === 'demo') renderDemo(s);
+}
+
+/* ── 전체 현황 ── */
+function renderOverview(){
+  $('ovList').innerHTML = SCHOOLS.map(s => {
+    const color = schoolColor(s.name);
+    const name = `<div class="ovName"><span class="schoolDot" style="background:${color}"></span>${esc(shortName(s.name))}</div>`;
+    if (!s.ok) return `<div class="ovRow" data-school="${esc(s.name)}">${name}
+      <div class="ovErr">⚠️ ${esc(s.error || '시트를 읽지 못했어요')}</div>
+      <div class="ovNext"><a class="ckLink" href="${esc(s.url)}" target="_blank" rel="noopener">시트 열기 ↗</a></div></div>`;
+    const p = progress(s.parsed.checklist);
+    const next = (s.parsed.checklist || []).find(i => stInfo(i.status).k === 'todo');
+    const stu = s.parsed.students ? s.parsed.students.list.length : 0;
+    const team = s.parsed.students ? s.parsed.students.teams.length : 0;
+    const open = s.parsed.course ? (s.parsed.course.calendar.find(c => c.item.includes('개강')) || {}).val : '';
+    const nextTxt = next
+      ? `다음: <b>${esc(next.item)}</b> (${esc(next.month)} ${esc(next.due)})`
+      : '체크리스트 항목을 모두 완료했어요 🎉';
+    return `<div class="ovRow" data-school="${esc(s.name)}">
+      ${name}
+      <div>
+        <div class="ovMeterRow"><div class="meter"><i style="width:${p.pct}%"></i></div>
+        <span class="ovPct">${p.done}/${p.total} · ${p.pct}%</span></div>
+        <div class="ovNext" style="margin-top:6px">${nextTxt}</div>
+      </div>
+      <div class="ovNext">수강생 <b>${stu ? stu + '명' : '입력 전'}</b> · 팀 <b>${team ? team + '개' : '입력 전'}</b>${open ? `<br/>개강 <b>${esc(open)}</b>` : ''}</div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.ovRow').forEach(r => r.addEventListener('click', e => {
+    if (e.target.closest('a')) return;
+    CUR = r.dataset.school;
+    sessionStorage.setItem('tfi_campus_school', CUR);
+    renderSchoolChips();
+    showPage('home');
+  }));
+}
+
+/* ── 개요 ── */
+function renderHome(s){
+  $('heroLabel').textContent = shortName(s.name) + ' · 체크리스트 진행률';
+  $('homeSheetBtn').href = s.url;
+  if (!s.ok){
+    $('heroNum').textContent = '—'; $('heroOf').textContent = ''; $('heroPct').textContent = '읽기 실패';
+    $('heroMeter').style.width = '0';
+    $('heroChips').innerHTML = `<span class="chip">⚠️ ${esc(s.error || '')}</span>`;
+    $('courseKv').innerHTML = ''; $('calKv').innerHTML = ''; $('staffTbl').innerHTML = ''; $('homeNext').innerHTML = '';
+    return;
+  }
+  const p = progress(s.parsed.checklist);
+  $('heroNum').textContent = p.done;
+  $('heroOf').textContent = '/ ' + p.total;
+  $('heroPct').textContent = p.pct + '%';
+  requestAnimationFrame(() => { $('heroMeter').style.width = p.pct + '%'; });
+
+  const stu = s.parsed.students || { list: [], teams: [] };
+  const cal = (s.parsed.course && s.parsed.course.calendar) || [];
+  const open = (cal.find(c => c.item.includes('개강')) || {}).val;
+  const close = (cal.find(c => c.item.includes('종강')) || {}).val;
+  $('heroChips').innerHTML = [
+    stu.list.length ? `수강생 <b>${stu.list.length}명</b>` : '수강생 <b>입력 전</b>',
+    stu.teams.length ? `팀 <b>${stu.teams.length}개</b>` : '팀 <b>입력 전</b>',
+    open ? `개강 <b>${esc(open)}</b>` : '',
+    close ? `종강 <b>${esc(close)}</b>` : ''
+  ].filter(Boolean).map(t => `<span class="chip">${t}</span>`).join('');
+
+  const info = (s.parsed.course && s.parsed.course.info) || [];
+  $('courseKv').innerHTML = info.length
+    ? info.map(i => `<dt>${esc(i.item)}</dt><dd>${esc(i.val) || '<span style="color:var(--muted)">입력 전</span>'}</dd>`).join('')
+    : '<dd style="color:var(--muted)">아직 입력 전이에요</dd>';
+  $('calKv').innerHTML = cal.length
+    ? cal.map(i => `<dt>${esc(i.item)}</dt><dd>${esc(i.val) || '<span style="color:var(--muted)">입력 전</span>'}</dd>`).join('')
+    : '<dd style="color:var(--muted)">아직 입력 전이에요</dd>';
+
+  /* 다가오는 할 일 3개 */
+  const todos = (s.parsed.checklist || []).filter(i => stInfo(i.status).k === 'todo');
+  $('homeNext').innerHTML = todos.length ? `<div class="statLabel">다가오는 할 일</div>` + todos.slice(0, 3).map(i => {
+    const dd = dday(i.month, i.due);
+    const cls = dd && dd.diff < 0 ? 'over' : dd && dd.diff <= 7 ? 'soon' : '';
+    return `<div class="ckTop" style="margin-bottom:7px">
+      <span class="catB" style="background:${catColor(i.cat)}">${esc(i.cat)}</span>
+      <span style="font-size:13px;font-weight:700">${esc(i.item)}</span>
+      <span class="ckDue ${cls}">${esc(i.month)} ${esc(i.due)}${dd ? ' · ' + dd.label : ''}</span></div>`;
+  }).join('') : '';
+
+  const staff = (s.parsed.course && s.parsed.course.staff) || [];
+  $('staffTbl').innerHTML = staff.length
+    ? `<tr><th>성명</th><th>직책</th><th>소속</th><th>이메일</th><th>연락처</th><th>역할</th></tr>` +
+      staff.map(m => `<tr><td><b>${esc(m.name)}</b></td><td>${esc(m.role)}</td><td>${esc(m.org)}</td><td>${esc(m.email)}</td><td>${esc(m.phone)}</td><td>${esc(m.duty)}</td></tr>`).join('')
+    : `<tr><td style="color:var(--muted)">아직 입력 전이에요</td></tr>`;
+}
+
+/* ── 체크리스트 ── */
+function renderCheck(s){
+  if (!s.ok || !s.parsed.checklist){
+    $('checkBox').innerHTML = `<div class="emptyBox"><div class="big">🗂️</div>체크리스트를 읽지 못했어요<br/>${esc(s.error || '시트의 [체크리스트] 탭을 확인해 주세요')}</div>`;
+    return;
+  }
+  const byMonth = new Map();
+  s.parsed.checklist.forEach(i => {
+    if (!byMonth.has(i.month)) byMonth.set(i.month, []);
+    byMonth.get(i.month).push(i);
+  });
+  $('checkBox').innerHTML = [...byMonth.entries()].map(([m, items]) => {
+    const done = items.filter(i => stInfo(i.status).k === 'done').length;
+    return `<div class="monthHead">${esc(m)} <span class="mCount">${done}/${items.length} 완료</span></div>` +
+      items.map(i => {
+        const st = stInfo(i.status);
+        const dd = st.k === 'todo' ? dday(i.month, i.due) : null;
+        const cls = dd && dd.diff < 0 ? 'over' : dd && dd.diff <= 7 ? 'soon' : '';
+        const link = i.link && /^https?:\/\//.test(i.link)
+          ? `<a class="ckLink" href="${esc(i.link)}" target="_blank" rel="noopener">입력/제출 링크 ↗</a>` : '';
+        return `<div class="ckItem ${st.k === 'done' ? 'isDone' : ''}">
+          <div class="ckMark ${st.k}">${st.icon}</div>
+          <div class="ckBody">
+            <div class="ckTop">
+              <span class="ckTitle">${esc(i.item)}</span>
+              <span class="catB" style="background:${catColor(i.cat)}">${esc(i.cat)}</span>
+              ${st.k === 'note' ? `<span class="stB">${esc(st.label)}</span>` : st.k === 'tbd' ? `<span class="stB">미정</span>` : ''}
+              <span class="ckDue ${cls}">기한 ${esc(i.due)}${dd ? ' · ' + dd.label : ''}</span>
+            </div>
+            <div class="ckDesc">${esc(i.desc)}</div>
+            ${link}
+          </div></div>`;
+      }).join('');
+  }).join('');
+}
+
+/* ── 수강생 · 팀 ── */
+function renderStudents(s){
+  const st = (s.ok && s.parsed.students) || { list: [], teams: [] };
+  const counts = {};
+  st.list.forEach(x => { const k = x.status || '수강 중'; counts[k] = (counts[k] || 0) + 1; });
+  $('stuSub').textContent = st.list.length
+    ? `총 ${st.list.length}명 · ` + Object.entries(counts).map(([k, v]) => `${k} ${v}명`).join(' · ')
+    : '최종 수강 인원 확정 후 학교에서 입력해요';
+  $('stuBox').innerHTML = st.list.length
+    ? `<div class="tblWrap"><table class="tbl"><tr><th>#</th><th>이름</th><th>학번</th><th>전공(학과)</th><th>이메일</th><th>연락처</th><th>팀명</th><th>팀장</th><th>상태</th><th>비고</th></tr>` +
+      st.list.map((x, i) => `<tr><td class="num">${i + 1}</td><td><b>${esc(x.name)}</b></td><td>${esc(x.sid)}</td><td>${esc(x.major)}</td><td>${esc(x.email)}</td><td>${esc(x.phone)}</td><td>${esc(x.team)}</td><td>${x.lead ? '⭐' : ''}</td><td>${esc(x.status)}</td><td>${esc(x.note)}</td></tr>`).join('') + '</table></div>'
+    : `<div class="emptyBox"><div class="big">🎓</div>아직 입력 전이에요<br/>수강 신청 마감 후 채워질 예정</div>`;
+  $('teamSub').textContent = st.teams.length ? `총 ${st.teams.length}개 팀` : '팀 빌딩 완료 후 학교에서 입력해요';
+  $('teamBox').innerHTML = st.teams.length
+    ? `<div class="tblWrap"><table class="tbl"><tr><th>#</th><th>팀명</th><th>팀장</th><th>사회혁신가</th><th>카카오멘토</th><th>수상 정보</th></tr>` +
+      st.teams.map((t, i) => `<tr><td class="num">${i + 1}</td><td><b>${esc(t.team)}</b></td><td>${esc(t.lead)}</td><td>${esc(t.innovator)}</td><td>${esc(t.mentor)}</td><td>${esc(t.award)}</td></tr>`).join('') + '</table></div>'
+    : `<div class="emptyBox"><div class="big">👥</div>아직 입력 전이에요<br/>팀 빌딩(9월) 후 채워질 예정</div>`;
+}
+
+/* ── 예산 ── */
+function renderBudget(s){
+  const b = (s.ok && s.parsed.budget) || { rows: [], steps: [], total: '' };
+  $('budgetBox').innerHTML = b.rows.length
+    ? `<div class="tblWrap"><table class="tbl"><tr><th>구분</th><th>항목</th><th>금액(원)</th><th>세부 내용</th></tr>` +
+      b.rows.map(r => `<tr><td>${esc(r.cat)}</td><td><b>${esc(r.item)}</b></td><td class="num">${esc(r.amt)}</td><td style="color:var(--body)">${esc(r.detail)}</td></tr>`).join('') +
+      (b.total ? `<tr class="total"><td></td><td>총액</td><td class="num">${esc(b.total)}</td><td></td></tr>` : '') + '</table></div>'
+    : `<div class="emptyBox"><div class="big">💰</div>아직 입력 전이에요</div>`;
+  $('stepsBox').innerHTML = b.steps.length
+    ? b.steps.map(x => `<div class="ckItem"><div class="ckMark todo" style="font-size:12px;font-weight:800">${esc(x.no)}</div>
+        <div class="ckBody"><div class="ckTitle" style="font-size:13.5px">${esc(x.what)}</div>
+        <div class="ckDesc">${esc(x.who)}</div></div></div>`).join('')
+    : `<div class="emptyBox">아직 입력 전이에요</div>`;
+}
+
+/* ── 성과발표회 ── */
+function renderDemo(s){
+  const d = (s.ok && s.parsed.demo) || { prep: [], info: [], awards: [], agenda: [] };
+  const done = d.prep.filter(x => stInfo(x.status).k === 'done').length;
+  $('demoPrepSub').textContent = d.prep.length ? `${done}/${d.prep.length} 완료` : '';
+  $('demoPrepBox').innerHTML = d.prep.length
+    ? d.prep.map(x => {
+        const st = stInfo(x.status);
+        return `<div class="ckItem ${st.k === 'done' ? 'isDone' : ''}" style="padding:11px 13px">
+          <div class="ckMark ${st.k}" style="width:22px;height:22px;font-size:12px">${st.icon}</div>
+          <div class="ckBody"><div class="ckTop"><span class="ckTitle" style="font-size:13.5px">${esc(x.item)}</span>
+            <span class="stB">${esc(x.who)}</span>${st.k === 'note' ? `<span class="stB">${esc(st.label)}</span>` : ''}</div>
+          <div class="ckDesc">${esc(x.desc)}</div></div></div>`;
+      }).join('')
+    : `<div class="emptyBox">아직 입력 전이에요</div>`;
+  $('demoInfoKv').innerHTML = d.info.length
+    ? d.info.map(i => `<dt>${esc(i.item)}</dt><dd>${esc(i.val) || '<span style="color:var(--muted)">입력 전</span>'}</dd>`).join('')
+    : '<dd style="color:var(--muted)">아직 입력 전이에요</dd>';
+  $('awardTbl').innerHTML = d.awards.length
+    ? `<tr><th>상명</th><th>선정 기준</th><th>시상금</th></tr>` +
+      d.awards.map(a => `<tr><td><b>${esc(a.name)}</b></td><td style="color:var(--body)">${esc(a.crit)}${a.note ? `<br/><span style="color:var(--muted);font-size:12px">${esc(a.note)}</span>` : ''}</td><td class="num">${a.pay === '있음' ? (a.amt ? esc(a.amt) + '만원' : '있음') : esc(a.pay)}</td></tr>`).join('')
+    : '';
+  $('agendaTbl').innerHTML = d.agenda.length
+    ? `<tr><th>#</th><th>시간</th><th>항목</th><th>내용</th><th>담당</th></tr>` +
+      d.agenda.map(a => `<tr><td class="num">${esc(a.no)}</td><td style="white-space:nowrap">${esc(a.time)}</td><td><b>${esc(a.item)}</b></td><td style="color:var(--body)">${esc(a.desc)}</td><td>${esc(a.who)}</td></tr>`).join('')
+    : '';
+}
+
+/* ═══════════ 데이터 로드 ═══════════ */
+function renderAll(data){
+  DATA = data;
+  SCHOOLS = (data.schools || []).map(s => ({ ...s, parsed: s.ok ? parseSchool(s) : null }));
+  if (!CUR && SCHOOLS.length) CUR = SCHOOLS[0].name;
+  const okCount = SCHOOLS.filter(s => s.ok).length;
+  $('updated').textContent = SCHOOLS.length
+    ? `기준: ${data.updatedAt} · ${okCount}/${SCHOOLS.length}개교 연동` + (data.masked ? ' · 연락처는 마스킹돼요 (원본은 시트에서)' : '')
+    : '아직 시트 연동 전이에요 — campus-apps-script.gs를 캠퍼스 마스터 시트에 설치하고, 배포 URL을 campus.html의 DATA_URL에 붙여넣어 주세요.';
+  renderSchoolChips();
+  renderPage();
+}
+
+async function load(){
+  if (DATA_URL) {
+    try {
+      const res = await fetch(DATA_URL);
+      renderAll(await res.json());
+      return;
+    } catch (err) { console.warn('시트 연동 실패', err); }
+  }
+  /* 연동 전 로컬 미리보기용 스냅샷 (레포에는 없음 — .gitignore) */
+  try {
+    const res = await fetch('campus-snapshot.json');
+    if (res.ok) { renderAll(await res.json()); return; }
+  } catch (err) { /* 없으면 안내만 */ }
+  renderAll({ updatedAt: '', schools: [] });
+}
+
+/* 자동 갱신: 2분마다 (Apps Script 쪽에 5분 캐시가 있어요) */
+let lastSnap = '';
+async function refreshData(){
+  if (!DATA_URL || document.hidden) return;
+  try {
+    const res = await fetch(DATA_URL);
+    const data = await res.json();
+    const snap = JSON.stringify(data.schools);
+    if (snap === lastSnap) return;
+    lastSnap = snap;
+    renderAll(data);
+  } catch (err) { /* 다음 주기에 재시도 */ }
+}
+setInterval(refreshData, 120000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshData(); });
+
+/* ── 비밀번호 게이트 (index/mentor와 동일 · 한 번 입력하면 전부 열려요) ── */
+const GATE_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+async function sha256(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function unlock(){
+  document.body.classList.remove('locked');
+  load();
+}
+async function tryGate(){
+  const pw = $('gatePw').value;
+  if (!pw) return;
+  if (await sha256(pw) === GATE_HASH) {
+    sessionStorage.setItem('tfi_gate', '1');
+    unlock();
+  } else {
+    $('gateErr').textContent = '비밀번호가 맞지 않아요';
+    $('gatePw').value = '';
+  }
+}
+$('gateBtn').addEventListener('click', tryGate);
+$('gatePw').addEventListener('keydown', e => { if (e.key === 'Enter') tryGate(); });
+if (sessionStorage.getItem('tfi_gate') === '1') unlock();
+else $('gatePw').focus();
+</script>
+</body>
+</html>
