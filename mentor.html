@@ -359,7 +359,10 @@ if (top === self) location.replace('admin.html#mentor');</script>
   .fRow {
     display: flex; align-items: flex-start; gap: 8px;
     background: var(--white); border-radius: 12px; padding: 9px 12px;
+    cursor: pointer; border: 2px solid transparent;
+    transition: border-color .15s, transform .12s;
   }
+  .fRow:hover { transform: translateY(-1px); border-color: var(--acc); }
   .fRow .jDot { width: 8px; height: 8px; border-radius: 50%; background: var(--jc, var(--etc)); flex: 0 0 auto; margin-top: 5px; }
   .fRow .fMain { min-width: 0; flex: 1; }
   .fRow .fName { font-size: 13.5px; font-weight: 800; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
@@ -1479,12 +1482,13 @@ function renderFinal(){
   const schools = Object.keys(FINAL);
   const total = schools.reduce((n, s) => n + FINAL[s].length, 0);
   document.getElementById('finalHint').textContent =
-    `${schools.length}개 대학 · 멘토 ${total}명 — 2026-08-13 확정 (🔁=재참여)`;
-  document.getElementById('finalGrid').innerHTML = schools.map(s => `
+    `${schools.length}개 대학 · 멘토 ${total}명 — 2026-08-13 확정 (🔁=재참여) · 이름을 클릭하면 지원서가 열려요`;
+  const grid = document.getElementById('finalGrid');
+  grid.innerHTML = schools.map(s => `
     <div class="fCard">
       <div class="fHead"><h3>${esc(s)}</h3><span class="fCnt">${FINAL[s].length}명</span></div>
       <div class="fRows">${FINAL[s].map(([n, j, c, co, d, re]) => `
-        <div class="fRow">
+        <div class="fRow" data-n="${esc(n)}" data-co="${esc(co)}" title="지원서 보기">
           <span class="jDot" style="--jc:${jobDColor(c)}"></span>
           <div class="fMain">
             <div class="fName">${esc(n)}${re ? ' 🔁' : ''} <span class="fJob">${esc(c === j ? j : c)}</span></div>
@@ -1493,6 +1497,24 @@ function renderFinal(){
         </div>`).join('')}
       </div>
     </div>`).join('');
+
+  /* 이름 클릭 → 지원서 모달 — 시트 데이터(PEOPLE)에서 이름으로 찾기 (동명이인은 공동체로 구분).
+     ‹ ›는 같은 대학 카드 안에서만 넘겨요. 데이터 로드 전이면 안내만. */
+  const findP = row => {
+    const cand = PEOPLE.filter(p => p.name === row.dataset.n);
+    return cand.length > 1
+      ? cand.find(p => String(p.company).replace(/\s/g, '').includes(row.dataset.co)) || cand[0]
+      : cand[0];
+  };
+  grid.querySelectorAll('.fRow').forEach(el => {
+    el.addEventListener('click', () => {
+      const p = findP(el);
+      if (!p) { alert(PEOPLE.length ? '신청 데이터에서 못 찾았어요.' : '신청 데이터를 아직 불러오는 중이에요 — 잠시 후 다시 클릭해 주세요.'); return; }
+      const navList = [...el.closest('.fRows').querySelectorAll('.fRow')]
+        .map(r => (findP(r) || {}).idx).filter(i => i !== undefined);
+      openPerson(p.idx, navList);
+    });
+  });
 }
 
 /* ── 페이지 탭 ── */
