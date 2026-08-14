@@ -29,9 +29,10 @@ const TAB_NAMES = [
   '성과발표회'
 ];
 
-/* GitHub Pages 공개 배포용이라 연락처(전화·이메일)와 학번은 마스킹해서 내보내요.
- * (README '개인정보 주의' 참고 — 원본이 필요하면 시트에서 직접 확인) */
-const INCLUDE_CONTACTS = false;
+/* 연락처(전화·이메일)·학번 마스킹 여부 — 운영팀 결정으로 어드민에서는 원본 표시(true).
+ * ※ 웹앱 URL을 아는 사람은 비밀번호 게이트 없이도 이 데이터를 볼 수 있어요.
+ *   민감도가 올라가면 false로 되돌리고 새 버전 배포. */
+const INCLUDE_CONTACTS = true;
 
 const CACHE_SEC = 300;   // 학교별 캐시 (초) — 12개 시트를 매번 열면 느려서
 const MAX_ROWS = 200;    // 탭당 최대 행

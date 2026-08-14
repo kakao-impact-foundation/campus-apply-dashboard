@@ -221,6 +221,27 @@ if (top === self) location.replace('admin.html#campus');</script>
   }
   .sheetBtn:hover { background: var(--acc-soft); }
 
+  /* ── 복사 ── */
+  .cardHeadRow { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .copyBtn {
+    appearance: none; border: 1.5px solid var(--line); background: var(--white);
+    color: var(--body); font-family: inherit; font-weight: 700; font-size: 12px;
+    padding: 6px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+    flex: 0 0 auto; transition: all .15s;
+  }
+  .copyBtn:hover { border-color: var(--acc); color: var(--acc-text); background: var(--acc-faint); }
+  .tbl td { cursor: copy; }
+  .tbl td:hover { background: var(--acc-faint); }
+  .kv dd { cursor: copy; border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
+  .kv dd:hover { background: var(--acc-faint); }
+  #toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(8px);
+    background: var(--ink); color: #fff; font-size: 13px; font-weight: 700;
+    padding: 10px 18px; border-radius: 999px; opacity: 0; pointer-events: none;
+    transition: opacity .2s, transform .2s; z-index: 50;
+  }
+  #toast.vis { opacity: 1; transform: translateX(-50%); }
+
   footer { margin-top: 60px; text-align: center; font-size: 12.5px; color: var(--muted); line-height: 2.2; }
 
   /* ── 비밀번호 게이트 (index/mentor와 동일) ── */
@@ -322,26 +343,38 @@ if (top === self) location.replace('admin.html#campus');</script>
       </section>
     </div>
     <section class="card rise" style="animation-delay:.1s">
-      <div class="cardTitle">운영진</div>
-      <div class="cardSub">수업 담당 교수 및 조교·행정 담당자</div>
+      <div class="cardHeadRow"><div>
+        <div class="cardTitle">운영진</div>
+        <div class="cardSub">수업 담당 교수 및 조교·행정 담당자</div>
+      </div><button class="copyBtn" data-copy="#staffTbl">⧉ 표 복사</button></div>
       <div class="tblWrap"><table class="tbl" id="staffTbl"></table></div>
       <div style="margin-top:14px"><a class="sheetBtn" id="homeSheetBtn" target="_blank" rel="noopener">📄 학교 운영 시트 열기 →</a></div>
     </section>
   </div>
 
   <div id="page-check" style="display:none">
-    <div class="card rise" id="checkBox"></div>
+    <div class="card rise">
+      <div class="cardHeadRow"><div>
+        <div class="cardTitle">체크리스트</div>
+        <div class="cardSub">월별 운영 일정과 진행 현황</div>
+      </div><button class="copyBtn" id="ckCopy">⧉ 표 복사</button></div>
+      <div id="checkBox"></div>
+    </div>
   </div>
 
   <div id="page-students" style="display:none">
     <section class="card rise" style="margin-bottom:18px">
-      <div class="cardTitle">수강생</div>
-      <div class="cardSub" id="stuSub"></div>
+      <div class="cardHeadRow"><div>
+        <div class="cardTitle">수강생</div>
+        <div class="cardSub" id="stuSub"></div>
+      </div><button class="copyBtn" data-copy="#stuBox">⧉ 표 복사</button></div>
       <div id="stuBox"></div>
     </section>
     <section class="card rise" style="animation-delay:.05s">
-      <div class="cardTitle">프로젝트 팀</div>
-      <div class="cardSub" id="teamSub"></div>
+      <div class="cardHeadRow"><div>
+        <div class="cardTitle">프로젝트 팀</div>
+        <div class="cardSub" id="teamSub"></div>
+      </div><button class="copyBtn" data-copy="#teamBox">⧉ 표 복사</button></div>
       <div id="teamBox"></div>
     </section>
   </div>
@@ -349,8 +382,10 @@ if (top === self) location.replace('admin.html#campus');</script>
   <div id="page-budget" style="display:none">
     <div class="grid2" style="grid-template-columns: 1.4fr 1fr;">
       <section class="card rise">
-        <div class="cardTitle">예산 운영 계획</div>
-        <div class="cardSub">학기당 지원 1,500만 원 · 기부금 형태</div>
+        <div class="cardHeadRow"><div>
+          <div class="cardTitle">예산 운영 계획</div>
+          <div class="cardSub">학기당 지원 1,500만 원 · 기부금 형태</div>
+        </div><button class="copyBtn" data-copy="#budgetBox">⧉ 표 복사</button></div>
         <div id="budgetBox"></div>
       </section>
       <section class="card rise" style="animation-delay:.05s">
@@ -375,15 +410,19 @@ if (top === self) location.replace('admin.html#campus');</script>
           <dl class="kv" id="demoInfoKv"></dl>
         </section>
         <section class="card rise" style="animation-delay:.07s">
-          <div class="cardTitle">시상 계획</div>
-          <div class="cardSub">우수 프로젝트 4개 상</div>
+          <div class="cardHeadRow"><div>
+            <div class="cardTitle">시상 계획</div>
+            <div class="cardSub">우수 프로젝트 4개 상</div>
+          </div><button class="copyBtn" data-copy="#awardTbl">⧉ 표 복사</button></div>
           <div class="tblWrap"><table class="tbl" id="awardTbl"></table></div>
         </section>
       </div>
     </div>
     <section class="card rise" style="animation-delay:.1s">
-      <div class="cardTitle">식순</div>
-      <div class="cardSub">성과발표회 진행 순서</div>
+      <div class="cardHeadRow"><div>
+        <div class="cardTitle">식순</div>
+        <div class="cardSub">성과발표회 진행 순서</div>
+      </div><button class="copyBtn" data-copy="#agendaTbl">⧉ 표 복사</button></div>
       <div class="tblWrap"><table class="tbl" id="agendaTbl"></table></div>
     </section>
   </div>
@@ -391,6 +430,8 @@ if (top === self) location.replace('admin.html#campus');</script>
   <footer>카카오임팩트 · 테크포임팩트 캠퍼스 — 내부 운영용 대시보드<br/>
   <a class="sheetBtn" href="https://docs.google.com/spreadsheets/d/1-yD3gmYfykoiSZTArs736uvDnvXUYkANlrWOTqPVCbg/edit?gid=2000827737#gid=2000827737" target="_blank" rel="noopener">📄 캠퍼스 운영 마스터 시트 열기 →</a></footer>
 </div>
+
+<div id="toast"></div>
 
 <script>
 /* ═══════════════════════════════════════════════════════════════
@@ -844,6 +885,58 @@ function renderDemo(s){
       d.agenda.map(a => `<tr><td class="num">${esc(a.no)}</td><td style="white-space:nowrap">${esc(a.time)}</td><td><b>${esc(a.item)}</b></td><td style="color:var(--body)">${esc(a.desc)}</td><td>${esc(a.who)}</td></tr>`).join('')
     : '';
 }
+
+/* ═══════════ 복사 ═══════════
+ * 셀·항목 클릭 = 그 값 하나 복사 / [⧉ 표 복사] = 표 전체를 탭 구분 텍스트로
+ * (구글시트·엑셀에 그대로 붙여넣을 수 있어요)
+ */
+let toastTimer = null;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('vis');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('vis'), 1600);
+}
+function copyText(text, msg){
+  const done = () => toast(msg || '복사했어요 ✓');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+  } else fallbackCopy(text, done);
+}
+function fallbackCopy(text, done){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch (err) { toast('복사에 실패했어요'); }
+  ta.remove();
+}
+const tsvCell = s => String(s || '').trim().replace(/\t/g, ' ').replace(/\n/g, ' ');
+function tableTSV(tbl){
+  return [...tbl.rows].map(r => [...r.cells].map(c => tsvCell(c.innerText)).join('\t')).join('\n');
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('a')) return;
+  const btn = e.target.closest('.copyBtn');
+  if (btn){
+    if (btn.id === 'ckCopy'){ /* 체크리스트는 카드 리스트라 파싱 데이터로 표를 만들어요 */
+      const s = curSchool();
+      const list = (s && s.parsed && s.parsed.checklist) || [];
+      if (!list.length) return toast('복사할 내용이 없어요');
+      const tsv = ['순번\t진행기간\t기한\t구분\t항목\t진행 현황\t링크',
+        ...list.map(i => [i.no, i.month, i.due, i.cat, i.item, stInfo(i.status).label, i.link].map(tsvCell).join('\t'))].join('\n');
+      return copyText(tsv, `${shortName(s.name)} 체크리스트를 복사했어요 ✓`);
+    }
+    const root = document.querySelector(btn.dataset.copy);
+    const tbl = root && (root.tagName === 'TABLE' ? root : root.querySelector('table.tbl'));
+    if (!tbl || tbl.rows.length < 2) return toast('복사할 내용이 없어요');
+    return copyText(tableTSV(tbl), '표 전체를 복사했어요 ✓ · 시트에 붙여넣기 가능');
+  }
+  const td = e.target.closest('.tbl td');
+  if (td && td.innerText.trim()) return copyText(td.innerText.trim());
+  const dd = e.target.closest('.kv dd');
+  if (dd && dd.innerText.trim() && dd.innerText.trim() !== '입력 전') copyText(dd.innerText.trim());
+});
 
 /* ═══════════ 데이터 로드 ═══════════ */
 function renderAll(data){
