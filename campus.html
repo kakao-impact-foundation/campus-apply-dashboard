@@ -165,10 +165,12 @@ if (top === self) location.replace('admin.html#campus');</script>
     display: flex; gap: 14px; align-items: flex-start;
     background: var(--white); border-radius: 16px; padding: 14px 16px; margin-bottom: 8px;
   }
-  .ckMark { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-top: 1px; }
-  .ckMark.done { background: #E7F6EF; }
-  .ckMark.todo { background: var(--line); }
-  .ckMark.tbd  { background: var(--line); }
+  .ckMark { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; margin-top: 1px; }
+  .ckMark svg { width: 13px; height: 13px; display: block; }
+  .ckMark.done { background: #E7F6EF; color: var(--ok); }
+  .ckMark.todo { background: var(--line); color: #9AA3AD; }
+  .ckMark.tbd  { background: var(--line); color: #9AA3AD; }
+  .ckMark.note { background: var(--acc-faint); color: var(--acc-text); }
   .ckBody { flex: 1; min-width: 0; }
   .ckTop { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .ckTitle { font-weight: 800; font-size: 14.5px; }
@@ -228,7 +230,13 @@ if (top === self) location.replace('admin.html#campus');</script>
     color: var(--body); font-family: inherit; font-weight: 700; font-size: 12px;
     padding: 6px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap;
     flex: 0 0 auto; transition: all .15s;
+    display: inline-flex; align-items: center; gap: 5px;
   }
+  .copyBtn svg { width: 12px; height: 12px; display: block; }
+  .sheetBtn svg { width: 14px; height: 14px; display: block; }
+  .emptyBox .big svg { width: 36px; height: 36px; color: #C2CAD3; }
+  .inlineIco svg { width: 14px; height: 14px; display: inline-block; vertical-align: -2px; margin-right: 4px; }
+  .starIco svg { width: 14px; height: 14px; display: inline-block; vertical-align: -2px; color: #F5B301; }
   .copyBtn:hover { border-color: var(--acc); color: var(--acc-text); background: var(--acc-faint); }
   .tbl td { cursor: copy; }
   .tbl td:hover { background: var(--acc-faint); }
@@ -370,9 +378,9 @@ if (top === self) location.replace('admin.html#campus');</script>
       <div class="cardHeadRow"><div>
         <div class="cardTitle">운영진</div>
         <div class="cardSub">수업 담당 교수 및 조교·행정 담당자</div>
-      </div><button class="copyBtn" data-copy="#staffTbl">⧉ 표 복사</button></div>
+      </div><button class="copyBtn" data-copy="#staffTbl">표 복사</button></div>
       <div class="tblWrap"><table class="tbl" id="staffTbl"></table></div>
-      <div style="margin-top:14px"><a class="sheetBtn" id="homeSheetBtn" target="_blank" rel="noopener">📄 학교 운영 시트 열기 →</a></div>
+      <div style="margin-top:14px"><a class="sheetBtn" id="homeSheetBtn" target="_blank" rel="noopener">학교 운영 시트 열기 →</a></div>
     </section>
   </div>
 
@@ -381,7 +389,7 @@ if (top === self) location.replace('admin.html#campus');</script>
       <div class="cardHeadRow"><div>
         <div class="cardTitle">체크리스트</div>
         <div class="cardSub">월별 운영 일정과 진행 현황</div>
-      </div><button class="copyBtn" id="ckCopy">⧉ 표 복사</button></div>
+      </div><button class="copyBtn" id="ckCopy">표 복사</button></div>
       <div id="checkBox"></div>
     </div>
   </div>
@@ -391,14 +399,14 @@ if (top === self) location.replace('admin.html#campus');</script>
       <div class="cardHeadRow"><div>
         <div class="cardTitle">수강생</div>
         <div class="cardSub" id="stuSub"></div>
-      </div><button class="copyBtn" data-copy="#stuBox">⧉ 표 복사</button></div>
+      </div><button class="copyBtn" data-copy="#stuBox">표 복사</button></div>
       <div id="stuBox"></div>
     </section>
     <section class="card rise" style="animation-delay:.05s">
       <div class="cardHeadRow"><div>
         <div class="cardTitle">프로젝트 팀</div>
         <div class="cardSub" id="teamSub"></div>
-      </div><button class="copyBtn" data-copy="#teamBox">⧉ 표 복사</button></div>
+      </div><button class="copyBtn" data-copy="#teamBox">표 복사</button></div>
       <div id="teamBox"></div>
     </section>
   </div>
@@ -409,7 +417,7 @@ if (top === self) location.replace('admin.html#campus');</script>
         <div class="cardHeadRow"><div>
           <div class="cardTitle">예산 운영 계획</div>
           <div class="cardSub">학기당 지원 1,500만 원 · 기부금 형태</div>
-        </div><button class="copyBtn" data-copy="#budgetBox">⧉ 표 복사</button></div>
+        </div><button class="copyBtn" data-copy="#budgetBox">표 복사</button></div>
         <div id="budgetBox"></div>
       </section>
       <section class="card rise" style="animation-delay:.05s">
@@ -437,7 +445,7 @@ if (top === self) location.replace('admin.html#campus');</script>
           <div class="cardHeadRow"><div>
             <div class="cardTitle">시상 계획</div>
             <div class="cardSub">우수 프로젝트 4개 상</div>
-          </div><button class="copyBtn" data-copy="#awardTbl">⧉ 표 복사</button></div>
+          </div><button class="copyBtn" data-copy="#awardTbl">표 복사</button></div>
           <div class="tblWrap"><table class="tbl" id="awardTbl"></table></div>
         </section>
       </div>
@@ -446,13 +454,13 @@ if (top === self) location.replace('admin.html#campus');</script>
       <div class="cardHeadRow"><div>
         <div class="cardTitle">식순</div>
         <div class="cardSub">성과발표회 진행 순서</div>
-      </div><button class="copyBtn" data-copy="#agendaTbl">⧉ 표 복사</button></div>
+      </div><button class="copyBtn" data-copy="#agendaTbl">표 복사</button></div>
       <div class="tblWrap"><table class="tbl" id="agendaTbl"></table></div>
     </section>
   </div>
 
   <footer>카카오임팩트 · 테크포임팩트 캠퍼스 — 내부 운영용 대시보드<br/>
-  <a class="sheetBtn" href="https://docs.google.com/spreadsheets/d/1-yD3gmYfykoiSZTArs736uvDnvXUYkANlrWOTqPVCbg/edit?gid=2000827737#gid=2000827737" target="_blank" rel="noopener">📄 캠퍼스 운영 마스터 시트 열기 →</a></footer>
+  <a class="sheetBtn" href="https://docs.google.com/spreadsheets/d/1-yD3gmYfykoiSZTArs736uvDnvXUYkANlrWOTqPVCbg/edit?gid=2000827737#gid=2000827737" target="_blank" rel="noopener">캠퍼스 운영 마스터 시트 열기 →</a></footer>
 </div>
 
 <div id="toast"></div>
@@ -490,6 +498,23 @@ let CUR = sessionStorage.getItem('tfi_campus_school') || '';
 let PAGE = 'all';
 
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ── 아이콘 셋 (이모지 대신 인라인 SVG · Feather 스타일) ── */
+const svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const I = {
+  check:  svg('<path d="M20 6 9 17l-5-5"/>'),
+  square: svg('<rect x="4.5" y="4.5" width="15" height="15" rx="4"/>'),
+  minus:  svg('<path d="M6 12h12"/>'),
+  clock:  svg('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
+  copy:   svg('<rect x="9" y="9" width="11.5" height="11.5" rx="2.5"/><path d="M5.5 15h-1A1.5 1.5 0 0 1 3 13.5v-9A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5v1"/>'),
+  sheet:  svg('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/>'),
+  grad:   svg('<path d="m12 4.5 10 4.5-10 4.5L2 9z"/><path d="M6 11.5v4.6c0 1.6 2.7 2.9 6 2.9s6-1.3 6-2.9v-4.6"/>'),
+  users:  svg('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17" cy="9" r="2.8"/><path d="M17.5 14.2c2.4.5 4 2.4 4 5"/>'),
+  wallet: svg('<rect x="3" y="6" width="18" height="14" rx="3"/><path d="M16.5 3.5 7 6"/><path d="M16 13h2.5"/>'),
+  board:  svg('<rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4.5V3h6v1.5"/><path d="M9 10h6M9 14h6"/>'),
+  alert:  svg('<path d="M10.3 4.2 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4.5"/><path d="M12 17.3h.01"/>'),
+  star:   '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.2 6.6L12 17.5l-5.9 3.1 1.2-6.6L2.5 9.4l6.6-.9z"/></svg>'
+};
 
 /* ═══════════ 시트 그리드 파싱 ═══════════
  * Apps Script가 내려주는 값은 탭별 원본 그리드(2차원 배열)예요.
@@ -656,10 +681,10 @@ function parseSchool(s){
 /* ── 체크리스트 상태 해석 ── */
 function stInfo(s){
   s = String(s || '').trim();
-  if (s === 'TRUE' || s === '완료' || s === '참석') return { k: 'done', label: s === 'TRUE' ? '완료' : s, icon: '✅' };
-  if (s === 'FALSE' || s === '') return { k: 'todo', label: '진행 전', icon: '⬜' };
-  if (s.includes('미정')) return { k: 'tbd', label: '미정', icon: '➖' };
-  return { k: 'note', label: s, icon: '🔹' }; // '11월 진행 예정' 등 자유 입력
+  if (s === 'TRUE' || s === '완료' || s === '참석') return { k: 'done', label: s === 'TRUE' ? '완료' : s, icon: I.check };
+  if (s === 'FALSE' || s === '') return { k: 'todo', label: '진행 전', icon: I.square };
+  if (s.includes('미정')) return { k: 'tbd', label: '미정', icon: I.minus };
+  return { k: 'note', label: s, icon: I.clock }; // '11월 진행 예정' 등 자유 입력
 }
 const progress = list => {
   const items = (list || []).filter(i => i.item);
@@ -729,7 +754,7 @@ function renderOverview(){
     const color = schoolColor(s.name);
     const name = `<div class="ovName"><span class="schoolDot" style="background:${color}"></span>${esc(shortName(s.name))}</div>`;
     if (!s.ok) return `<div class="ovRow" data-school="${esc(s.name)}">${name}
-      <div class="ovErr">⚠️ ${esc(s.error || '시트를 읽지 못했어요')}</div>
+      <div class="ovErr"><span class="inlineIco">${I.alert}</span>${esc(s.error || '시트를 읽지 못했어요')}</div>
       <div class="ovNext"><a class="ckLink" href="${esc(s.url)}" target="_blank" rel="noopener">시트 열기 ↗</a></div></div>`;
     const p = progress(s.parsed.checklist);
     const next = (s.parsed.checklist || []).find(i => stInfo(i.status).k === 'todo');
@@ -738,7 +763,7 @@ function renderOverview(){
     const open = s.parsed.course ? (s.parsed.course.calendar.find(c => c.item.includes('개강')) || {}).val : '';
     const nextTxt = next
       ? `다음: <b>${esc(next.item)}</b> (${esc(next.month)} ${esc(next.due)})`
-      : '체크리스트 항목을 모두 완료했어요 🎉';
+      : '체크리스트 항목을 모두 완료했어요';
     return `<div class="ovRow" data-school="${esc(s.name)}">
       ${name}
       <div>
@@ -765,7 +790,7 @@ function renderHome(s){
   if (!s.ok){
     $('heroNum').textContent = '—'; $('heroOf').textContent = ''; $('heroPct').textContent = '읽기 실패';
     $('heroMeter').style.width = '0';
-    $('heroChips').innerHTML = `<span class="chip">⚠️ ${esc(s.error || '')}</span>`;
+    $('heroChips').innerHTML = `<span class="chip"><span class="inlineIco">${I.alert}</span>${esc(s.error || '')}</span>`;
     $('courseKv').innerHTML = ''; $('calKv').innerHTML = ''; $('staffTbl').innerHTML = ''; $('homeNext').innerHTML = '';
     return;
   }
@@ -815,7 +840,7 @@ function renderHome(s){
 /* ── 체크리스트 ── */
 function renderCheck(s){
   if (!s.ok || !s.parsed.checklist){
-    $('checkBox').innerHTML = `<div class="emptyBox"><div class="big">🗂️</div>체크리스트를 읽지 못했어요<br/>${esc(s.error || '시트의 [체크리스트] 탭을 확인해 주세요')}</div>`;
+    $('checkBox').innerHTML = `<div class="emptyBox"><div class="big">${I.board}</div>체크리스트를 읽지 못했어요<br/>${esc(s.error || '시트의 [체크리스트] 탭을 확인해 주세요')}</div>`;
     return;
   }
   const byMonth = new Map();
@@ -858,13 +883,13 @@ function renderStudents(s){
     : '최종 수강 인원 확정 후 학교에서 입력해요';
   $('stuBox').innerHTML = st.list.length
     ? `<div class="tblWrap"><table class="tbl"><tr><th>#</th><th>이름</th><th>학번</th><th>전공(학과)</th><th>이메일</th><th>연락처</th><th>팀명</th><th>팀장</th><th>상태</th><th>비고</th></tr>` +
-      st.list.map((x, i) => `<tr><td class="num">${i + 1}</td><td><b>${esc(x.name)}</b></td><td>${esc(x.sid)}</td><td>${esc(x.major)}</td><td>${esc(x.email)}</td><td>${esc(x.phone)}</td><td>${esc(x.team)}</td><td>${x.lead ? '⭐' : ''}</td><td>${esc(x.status)}</td><td>${esc(x.note)}</td></tr>`).join('') + '</table></div>'
-    : `<div class="emptyBox"><div class="big">🎓</div>아직 입력 전이에요<br/>수강 신청 마감 후 채워질 예정</div>`;
+      st.list.map((x, i) => `<tr><td class="num">${i + 1}</td><td><b>${esc(x.name)}</b></td><td>${esc(x.sid)}</td><td>${esc(x.major)}</td><td>${esc(x.email)}</td><td>${esc(x.phone)}</td><td>${esc(x.team)}</td><td>${x.lead ? '<span class="starIco">' + I.star + '</span>' : ''}</td><td>${esc(x.status)}</td><td>${esc(x.note)}</td></tr>`).join('') + '</table></div>'
+    : `<div class="emptyBox"><div class="big">${I.grad}</div>아직 입력 전이에요<br/>수강 신청 마감 후 채워질 예정</div>`;
   $('teamSub').textContent = st.teams.length ? `총 ${st.teams.length}개 팀` : '팀 빌딩 완료 후 학교에서 입력해요';
   $('teamBox').innerHTML = st.teams.length
     ? `<div class="tblWrap"><table class="tbl"><tr><th>#</th><th>팀명</th><th>팀장</th><th>사회혁신가</th><th>카카오멘토</th><th>수상 정보</th></tr>` +
       st.teams.map((t, i) => `<tr><td class="num">${i + 1}</td><td><b>${esc(t.team)}</b></td><td>${esc(t.lead)}</td><td>${esc(t.innovator)}</td><td>${esc(t.mentor)}</td><td>${esc(t.award)}</td></tr>`).join('') + '</table></div>'
-    : `<div class="emptyBox"><div class="big">👥</div>아직 입력 전이에요<br/>팀 빌딩(9월) 후 채워질 예정</div>`;
+    : `<div class="emptyBox"><div class="big">${I.users}</div>아직 입력 전이에요<br/>팀 빌딩(9월) 후 채워질 예정</div>`;
 }
 
 /* ── 예산 ── */
@@ -874,7 +899,7 @@ function renderBudget(s){
     ? `<div class="tblWrap"><table class="tbl"><tr><th>구분</th><th>항목</th><th>금액(원)</th><th>세부 내용</th></tr>` +
       b.rows.map(r => `<tr><td>${esc(r.cat)}</td><td><b>${esc(r.item)}</b></td><td class="num">${esc(r.amt)}</td><td style="color:var(--body)">${esc(r.detail)}</td></tr>`).join('') +
       (b.total ? `<tr class="total"><td></td><td>총액</td><td class="num">${esc(b.total)}</td><td></td></tr>` : '') + '</table></div>'
-    : `<div class="emptyBox"><div class="big">💰</div>아직 입력 전이에요</div>`;
+    : `<div class="emptyBox"><div class="big">${I.wallet}</div>아직 입력 전이에요</div>`;
   $('stepsBox').innerHTML = b.steps.length
     ? b.steps.map(x => `<div class="ckItem"><div class="ckMark todo" style="font-size:12px;font-weight:800">${esc(x.no)}</div>
         <div class="ckBody"><div class="ckTitle" style="font-size:13.5px">${esc(x.what)}</div>
@@ -911,7 +936,7 @@ function renderDemo(s){
 }
 
 /* ═══════════ 복사 ═══════════
- * 셀·항목 클릭 = 그 값 하나 복사 / [⧉ 표 복사] = 표 전체를 탭 구분 텍스트로
+ * 셀·항목 클릭 = 그 값 하나 복사 / [표 복사] = 표 전체를 탭 구분 텍스트로
  * (구글시트·엑셀에 그대로 붙여넣을 수 있어요)
  */
 let toastTimer = null;
@@ -961,6 +986,10 @@ document.addEventListener('click', e => {
   const dd = e.target.closest('.kv dd');
   if (dd && dd.innerText.trim() && dd.innerText.trim() !== '입력 전') copyText(dd.innerText.trim());
 });
+
+/* 정적 버튼에 아이콘 주입 */
+document.querySelectorAll('.copyBtn').forEach(b => b.insertAdjacentHTML('afterbegin', I.copy));
+document.querySelectorAll('.sheetBtn').forEach(b => b.insertAdjacentHTML('afterbegin', I.sheet));
 
 /* ═══════════ 데이터 로드 ═══════════ */
 function renderAll(data){
